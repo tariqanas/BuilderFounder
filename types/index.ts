@@ -45,3 +45,20 @@ export interface IdeaLike {
   user_id: string;
   created_at: string;
 }
+
+export interface Match {
+  id: string;
+  idea_id: string;
+  builder_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  match_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
