@@ -31,3 +31,17 @@ export interface IdeaFormData {
   what_i_seek: string;
   tags: string[];
 }
+
+export interface IdeaWithProfile extends Idea {
+  profiles: {
+    username: string | null;
+    bio: string | null;
+  } | null;
+}
+
+export interface IdeaLike {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  created_at: string;
+}
