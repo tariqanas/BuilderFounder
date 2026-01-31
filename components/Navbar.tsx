@@ -58,6 +58,9 @@ export default function Navbar() {
               <Link className="hover:text-white" href="/dashboard">
                 Dashboard
               </Link>
+              <Link className="hover:text-white" href="/profile">
+                Profil
+              </Link>
               <Link className="hover:text-white" href="/feed">
                 Feed
               </Link>
