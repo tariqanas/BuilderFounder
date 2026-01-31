@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-import type { Idea, IdeaFormData, IdeaWithProfile } from "@/types";
+import type { Idea, IdeaFormData, IdeaWithProfile, Match, Message } from "@/types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -201,3 +201,129 @@ export const createLike = async (ideaId: string): Promise<void> => {
     throw error;
   }
 };
+
+export const createMatch = async (
+  ideaId: string,
+  builderId: string,
+): Promise<Match> => {
+  const { data, error } = await supabase
+    .from("matches")
+    .insert({ idea_id: ideaId, builder_id: builderId, status: "accepted" })
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error("Match creation failed");
+  }
+
+  return data as Match;
+};
+
+export const acceptLike = async (
+  ideaId: string,
+  builderId: string,
+): Promise<Match> => {
+  const match = await createMatch(ideaId, builderId);
+
+  const { error } = await supabase
+    .from("idea_likes")
+    .delete()
+    .eq("idea_id", ideaId)
+    .eq("user_id", builderId);
+
+  if (error) {
+    throw error;
+  }
+
+  return match;
+};
+
+export const getMessages = async (matchId: string): Promise<Message[]> => {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("match_id", matchId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as Message[];
+};
+
+export const sendMessage = async (
+  matchId: string,
+  content: string,
+): Promise<Message> => {
+  const { data: authData, error: authError } =
+    await supabase.auth.getUser();
+
+  if (authError || !authData.user) {
+    throw new Error("User not authenticated");
+  }
+
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      match_id: matchId,
+      user_id: authData.user.id,
+      content,
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new Error("Message send failed");
+  }
+
+  return data as Message;
+};
+
+export const subscribeToMatchUpdates = (
+  builderId: string,
+  onMatchAccepted: (match: Match) => void,
+) =>
+  supabase
+    .channel(`matches-${builderId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "matches",
+        filter: `builder_id=eq.${builderId}`,
+      },
+      (payload) => {
+        onMatchAccepted(payload.new as Match);
+      },
+    )
+    .subscribe();
+
+export const subscribeToMessages = (
+  matchId: string,
+  onMessage: (message: Message) => void,
+) =>
+  supabase
+    .channel(`messages-${matchId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `match_id=eq.${matchId}`,
+      },
+      (payload) => {
+        onMessage(payload.new as Message);
+      },
+    )
+    .subscribe();
