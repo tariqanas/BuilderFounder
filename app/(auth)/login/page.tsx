@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -40,7 +41,24 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    const { data } = await supabase.auth.getUser();
+    const userId = data.user?.id;
+
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!profile?.role) {
+        router.push("/profile/setup");
+        return;
+      }
+    }
+
+    const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+    router.push(redirectTo);
   };
 
   const handleGoogleLogin = async () => {

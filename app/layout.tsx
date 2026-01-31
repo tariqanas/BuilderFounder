@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: "BuilderFounder",
@@ -25,6 +26,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
+        <Toaster />
       </body>
     </html>
   );

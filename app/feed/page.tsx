@@ -6,6 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import IdeaCard from "@/components/IdeaCard";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/use-toast";
+import { playToastSound } from "@/lib/toast-sound";
 import {
   checkIfLiked,
   createLike,
@@ -48,7 +51,6 @@ export default function FeedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [likeLoadingId, setLikeLoadingId] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
   const nicheParam = searchParams.get("niche") ?? "";
@@ -139,9 +141,11 @@ export default function FeedPage() {
             .maybeSingle();
 
           if (data?.user_id === profile.id) {
-            setToastMessage(
-              `Un builder est intéressé par ton idée : ${data.title} !`,
-            );
+            toast({
+              title: "Nouveau like",
+              description: `Un builder est intéressé par ton idée : ${data.title} !`,
+            });
+            playToastSound();
           }
         },
       )
@@ -158,10 +162,17 @@ export default function FeedPage() {
     try {
       await createLike(ideaId);
       setLikedMap((prev) => ({ ...prev, [ideaId]: true }));
-      setToastMessage("Intéressé notifié !");
+      toast({
+        title: "Like envoyé",
+        description: "Intéressé notifié !",
+      });
+      playToastSound();
     } catch (error) {
       console.error(error);
-      setToastMessage("Impossible de liker pour le moment.");
+      toast({
+        title: "Oops",
+        description: "Impossible de liker pour le moment.",
+      });
     } finally {
       setLikeLoadingId(null);
     }
@@ -253,8 +264,22 @@ export default function FeedPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
-          Chargement du feed...
+        <div className="grid gap-6">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`skeleton-${index}`}
+              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6"
+            >
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="mt-3 h-4 w-full" />
+              <Skeleton className="mt-2 h-4 w-5/6" />
+              <div className="mt-4 flex gap-2">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+              <Skeleton className="mt-4 h-10 w-32" />
+            </div>
+          ))}
         </div>
       ) : ideas.length === 0 ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-sm text-slate-300">
@@ -289,11 +314,6 @@ export default function FeedPage() {
         </div>
       )}
 
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 max-w-xs rounded-2xl border border-emerald-400/40 bg-slate-900/90 px-4 py-3 text-sm text-emerald-200 shadow-lg">
-          {toastMessage}
-        </div>
-      )}
     </section>
   );
 }

@@ -96,7 +96,7 @@ export default function Navbar() {
           )}
           {user && (
             <button
-              className="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-wide text-slate-300 hover:border-slate-500"
+              className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200 hover:border-emerald-300 hover:text-emerald-100"
               type="button"
               onClick={handleLogout}
             >

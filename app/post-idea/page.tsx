@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 import IdeaForm from "@/components/IdeaForm";
+import { toast } from "@/components/ui/use-toast";
+import { playToastSound } from "@/lib/toast-sound";
 import { useProfile } from "@/lib/useProfile";
 
 const DEFAULT_TAGS = [
@@ -20,7 +22,6 @@ const DEFAULT_TAGS = [
 export default function PostIdeaPage() {
   const router = useRouter();
   const { profile, isLoading } = useProfile();
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isLoading) return;
@@ -39,7 +40,11 @@ export default function PostIdeaPage() {
   }, [profile]);
 
   const handleSuccess = () => {
-    setToastMessage("Idée publiée ! Redirection vers le feed...");
+    toast({
+      title: "Idée publiée",
+      description: "Redirection vers le feed...",
+    });
+    playToastSound();
     setTimeout(() => {
       router.push("/feed");
     }, 1200);
@@ -76,11 +81,6 @@ export default function PostIdeaPage() {
 
       <IdeaForm availableTags={availableTags} onSuccess={handleSuccess} />
 
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 rounded-2xl border border-emerald-400/40 bg-slate-900/90 px-4 py-3 text-sm text-emerald-200 shadow-lg">
-          {toastMessage}
-        </div>
-      )}
     </section>
   );
 }

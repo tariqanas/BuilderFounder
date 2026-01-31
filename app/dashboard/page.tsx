@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 
 import DashboardSections from "@/components/DashboardSections";
 import ProfileCard from "@/components/ProfileCard";
-import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ToastAction } from "@/components/ui/toast";
+import { toast } from "@/components/ui/use-toast";
 import {
   acceptLike,
   getLikesReceived,
@@ -14,6 +16,7 @@ import {
   getMySentLikes,
   supabase,
 } from "@/lib/supabase";
+import { playToastSound } from "@/lib/toast-sound";
 import { useProfile } from "@/lib/useProfile";
 import type {
   DashboardIdea,
@@ -30,11 +33,6 @@ export default function DashboardPage() {
   const [matches, setMatches] = useState<DashboardMatch[]>([]);
   const [sentLikes, setSentLikes] = useState<SentLike[]>([]);
   const [isFetching, setIsFetching] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [matchToast, setMatchToast] = useState<{
-    message: string;
-    matchId: string;
-  } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -106,7 +104,11 @@ export default function DashboardPage() {
           if (data?.user_id === profile.id) {
             const likes = await getLikesReceived(profile.id);
             setLikesReceived(likes);
-            setToastMessage(`Nouveau like sur ${data.title}`);
+            toast({
+              title: "Nouveau like",
+              description: `Nouveau like sur ${data.title}`,
+            });
+            playToastSound();
           }
         },
       )
@@ -123,10 +125,19 @@ export default function DashboardPage() {
             if (match.builder_id !== profile.id) return;
             const matchesData = await getMyMatches(profile.id, profile.role);
             setMatches(matchesData);
-            setMatchToast({
-              message: "Ton like a été accepté ! Ouvre le chat.",
-              matchId: match.id,
+            toast({
+              title: "Match confirmé",
+              description: "Ton like a été accepté ! Ouvre le chat.",
+              action: (
+                <ToastAction
+                  altText="Ouvrir le chat"
+                  onClick={() => router.push(`/chat/${match.id}`)}
+                >
+                  Ouvrir le chat
+                </ToastAction>
+              ),
             });
+            playToastSound();
             return;
           }
 
@@ -156,11 +167,18 @@ export default function DashboardPage() {
     try {
       const match = await acceptLike(like.ideas.id, like.profiles.id);
       setLikesReceived((prev) => prev.filter((item) => item.id !== like.id));
-      setToastMessage("Match créé ! Chat ouvert.");
+      toast({
+        title: "Match créé",
+        description: "Match créé ! Chat ouvert.",
+      });
+      playToastSound();
       router.push(`/chat/${match.id}`);
     } catch (error) {
       console.error(error);
-      setToastMessage("Impossible de créer le match pour le moment.");
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le match pour le moment.",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -179,10 +197,16 @@ export default function DashboardPage() {
       }
 
       setLikesReceived((prev) => prev.filter((item) => item.id !== like.id));
-      setToastMessage("Like ignoré.");
+      toast({
+        title: "Like ignoré",
+        description: "Like ignoré.",
+      });
     } catch (error) {
       console.error(error);
-      setToastMessage("Impossible d'ignorer ce like.");
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ignorer ce like.",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -221,45 +245,46 @@ export default function DashboardPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-slate-400">Chargement...</p>
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="mt-4 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-3/4" />
+        </div>
       ) : (
         <ProfileCard profile={profile} />
       )}
 
-      {profile?.role && (
-        <DashboardSections
-          role={profile.role}
-          myIdeas={myIdeas}
-          likesReceived={likesReceived}
-          matches={matches}
-          sentLikes={sentLikes}
-          notifications={notifications}
-          onAccept={handleAccept}
-          onIgnore={handleIgnore}
-          actionLoadingId={actionLoading}
-        />
-      )}
+      {profile?.role &&
+        (isFetching ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={`dashboard-skeleton-${index}`}
+                className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6"
+              >
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="mt-4 h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-5/6" />
+                <Skeleton className="mt-4 h-8 w-24" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <DashboardSections
+            role={profile.role}
+            myIdeas={myIdeas}
+            likesReceived={likesReceived}
+            matches={matches}
+            sentLikes={sentLikes}
+            notifications={notifications}
+            onAccept={handleAccept}
+            onIgnore={handleIgnore}
+            actionLoadingId={actionLoading}
+          />
+        ))}
 
       {isFetching && (
         <p className="text-xs text-slate-500">Mise à jour du dashboard...</p>
-      )}
-
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 max-w-xs rounded-2xl border border-emerald-400/40 bg-slate-900/90 px-4 py-3 text-sm text-emerald-200 shadow-lg">
-          {toastMessage}
-        </div>
-      )}
-
-      {matchToast && (
-        <div className="fixed bottom-24 right-6 max-w-xs rounded-2xl border border-emerald-400/40 bg-slate-900/90 px-4 py-3 text-sm text-emerald-200 shadow-lg">
-          <p>{matchToast.message}</p>
-          <Button
-            className="mt-3 w-full"
-            onClick={() => router.push(`/chat/${matchToast.matchId}`)}
-          >
-            Ouvrir le chat
-          </Button>
-        </div>
       )}
     </section>
   );

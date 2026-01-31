@@ -5,12 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/use-toast";
 import {
   getMessages,
   sendMessage,
   subscribeToMessages,
   supabase,
 } from "@/lib/supabase";
+import { playToastSound } from "@/lib/toast-sound";
 import type { Message } from "@/types";
 
 type ChatWindowProps = {
@@ -59,6 +62,13 @@ export default function ChatWindow({ matchId, currentUserId }: ChatWindowProps) 
 
   useEffect(() => {
     const channel = subscribeToMessages(matchId, (message) => {
+      if (message.user_id !== currentUserId) {
+        toast({
+          title: "Nouveau message",
+          description: message.content.slice(0, 80),
+        });
+        playToastSound();
+      }
       setMessages((prev) => {
         if (prev.some((item) => item.id === message.id)) {
           return prev;
@@ -99,7 +109,16 @@ export default function ChatWindow({ matchId, currentUserId }: ChatWindowProps) 
     <div className="space-y-4">
       <ScrollArea className="h-[420px] rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
         {isLoading ? (
-          <p className="text-sm text-slate-300">Chargement du chat...</p>
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={`chat-skeleton-${index}`}
+                className={`flex ${index % 2 === 0 ? "justify-start" : "justify-end"}`}
+              >
+                <Skeleton className="h-12 w-2/3 rounded-2xl" />
+              </div>
+            ))}
+          </div>
         ) : messages.length === 0 ? (
           <p className="text-sm text-slate-400">
             Aucun message pour le moment. Lance la discussion !
