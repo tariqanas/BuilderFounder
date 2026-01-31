@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/feed", "/post-idea"];
+const protectedRoutes = ["/dashboard", "/feed", "/post-idea", "/profile"];
 
 const hasSupabaseCookie = (request: NextRequest) => {
   const cookies = request.cookies.getAll();
@@ -31,5 +31,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/feed/:path*", "/post-idea/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/feed/:path*",
+    "/post-idea/:path*",
+    "/profile/:path*",
+  ],
 };
