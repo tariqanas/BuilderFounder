@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
+import type { Idea, IdeaFormData } from "@/types";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -85,4 +87,43 @@ export const updateProfile = async (profile: ProfileUpdate) => {
   }
 
   return data as Profile;
+};
+
+export const createIdea = async (data: IdeaFormData): Promise<void> => {
+  const { data: authData, error: authError } =
+    await supabase.auth.getUser();
+
+  if (authError || !authData.user) {
+    throw new Error("User not authenticated");
+  }
+
+  const payload = {
+    user_id: authData.user.id,
+    title: data.title,
+    niche_problem: data.niche_problem,
+    traction: data.traction,
+    what_i_bring: data.what_i_bring,
+    what_i_seek: data.what_i_seek,
+    tags: data.tags,
+  };
+
+  const { error } = await supabase.from("ideas").insert(payload);
+
+  if (error) {
+    throw error;
+  }
+};
+
+export const getUserIdeas = async (userId: string): Promise<Idea[]> => {
+  const { data, error } = await supabase
+    .from("ideas")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as Idea[];
 };
