@@ -24,9 +24,19 @@ export default function Navbar() {
         setUser(null);
         return;
       }
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", supaUser.id)
+        .maybeSingle();
+
       setUser({
         email: supaUser.email ?? undefined,
-        role: (supaUser.user_metadata?.role as string | undefined) ?? undefined,
+        role:
+          (profileData?.role as string | undefined) ??
+          (supaUser.user_metadata?.role as string | undefined) ??
+          undefined,
       });
     };
 
@@ -64,7 +74,7 @@ export default function Navbar() {
               <Link className="hover:text-white" href="/feed">
                 Feed
               </Link>
-              {user.role === "idea" && (
+              {user.role === "idea_person" && (
                 <Link className="hover:text-white" href="/post-idea">
                   Post Idea
                 </Link>

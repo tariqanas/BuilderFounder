@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 
 const roles = [
-  { value: "idea", label: "Idea Person" },
+  { value: "idea_person", label: "Idea Person" },
   { value: "builder", label: "Builder" },
 ];
 
@@ -21,7 +21,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    role: "idea",
+    role: "idea_person",
     username: "",
     bio: "",
     email: "",

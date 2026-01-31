@@ -1,4 +1,4 @@
-export type UserRole = "idea" | "builder";
+export type UserRole = "idea_person" | "builder";
 
 export interface AppUser {
   id: string;
@@ -11,9 +11,23 @@ export interface AppUser {
 
 export interface Idea {
   id: string;
+  user_id: string;
   title: string;
-  description: string;
-  createdBy: string;
-  createdAt: string;
-  tags?: string[];
+  niche_problem: string;
+  traction: string | null;
+  what_i_bring: string;
+  what_i_seek: string;
+  tags: string[] | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IdeaFormData {
+  title: string;
+  niche_problem: string;
+  traction: string;
+  what_i_bring: string;
+  what_i_seek: string;
+  tags: string[];
 }
