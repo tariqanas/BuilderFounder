@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-import type { Idea, IdeaFormData } from "@/types";
+import type { Idea, IdeaFormData, IdeaWithProfile } from "@/types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -126,4 +126,78 @@ export const getUserIdeas = async (userId: string): Promise<Idea[]> => {
   }
 
   return (data ?? []) as Idea[];
+};
+
+export type IdeaFilters = {
+  niche?: string;
+  tag?: string;
+};
+
+export const getAllIdeas = async (
+  limit = 10,
+  offset = 0,
+  filters: IdeaFilters = {},
+): Promise<IdeaWithProfile[]> => {
+  let query = supabase
+    .from("ideas")
+    .select(
+      "id, user_id, title, niche_problem, traction, what_i_bring, what_i_seek, tags, status, created_at, updated_at, profiles ( username, bio )",
+    )
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (filters.niche) {
+    query = query.ilike("niche_problem", `%${filters.niche}%`);
+  }
+
+  if (filters.tag) {
+    query = query.contains("tags", [filters.tag]);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as IdeaWithProfile[];
+};
+
+export const checkIfLiked = async (
+  ideaId: string,
+  userId: string,
+): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from("idea_likes")
+    .select("id")
+    .eq("idea_id", ideaId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error && error.code !== "PGRST116") {
+    throw error;
+  }
+
+  return Boolean(data);
+};
+
+export const createLike = async (ideaId: string): Promise<void> => {
+  const { data: authData, error: authError } =
+    await supabase.auth.getUser();
+
+  if (authError || !authData.user) {
+    throw new Error("User not authenticated");
+  }
+
+  const payload = {
+    idea_id: ideaId,
+    user_id: authData.user.id,
+  };
+
+  const { error } = await supabase.from("idea_likes").insert(payload);
+
+  if (error) {
+    throw error;
+  }
 };

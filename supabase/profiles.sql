@@ -11,9 +11,9 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
-create policy "Profiles are viewable by owner" on public.profiles
+create policy "Profiles are viewable by anyone" on public.profiles
   for select
-  using (auth.uid() = id);
+  using (true);
 
 create policy "Profiles are insertable by owner" on public.profiles
   for insert
