@@ -34,6 +34,61 @@ export type ProfileUpdate = {
   stack_tags?: string[];
 };
 
+export type DashboardIdea = Pick<
+  Idea,
+  "id" | "title" | "traction" | "status" | "created_at"
+>;
+
+export type LikeReceived = {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  created_at: string;
+  ideas: {
+    id: string;
+    title: string;
+    user_id: string;
+  } | null;
+  profiles: {
+    id: string;
+    username: string | null;
+    bio: string | null;
+  } | null;
+};
+
+export type DashboardMatch = Match & {
+  ideas: {
+    id: string;
+    title: string;
+    user_id: string;
+    profiles?: {
+      id: string;
+      username: string | null;
+    } | null;
+  } | null;
+  builder?: {
+    id: string;
+    username: string | null;
+  } | null;
+};
+
+export type SentLike = {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  created_at: string;
+  ideas: {
+    id: string;
+    title: string;
+    user_id: string;
+    profiles: {
+      id: string;
+      username: string | null;
+    } | null;
+  } | null;
+  matchStatus: "accepted" | "pending";
+};
+
 export const getCurrentUserProfile = async () => {
   const { data: authData, error: authError } =
     await supabase.auth.getUser();
@@ -162,6 +217,108 @@ export const getAllIdeas = async (
   }
 
   return (data ?? []) as IdeaWithProfile[];
+};
+
+export const getMyIdeas = async (userId: string): Promise<DashboardIdea[]> => {
+  const { data, error } = await supabase
+    .from("ideas")
+    .select("id, title, traction, status, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as DashboardIdea[];
+};
+
+export const getLikesReceived = async (
+  userId: string,
+): Promise<LikeReceived[]> => {
+  const { data, error } = await supabase
+    .from("idea_likes")
+    .select(
+      "id, idea_id, user_id, created_at, ideas ( id, title, user_id ), profiles ( id, username, bio )",
+    )
+    .eq("ideas.user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as LikeReceived[];
+};
+
+export const getMyMatches = async (
+  userId: string,
+  role: ProfileRole,
+): Promise<DashboardMatch[]> => {
+  let query = supabase
+    .from("matches")
+    .select(
+      "id, idea_id, builder_id, status, created_at, updated_at, ideas ( id, title, user_id, profiles ( id, username ) ), builder:profiles ( id, username )",
+    )
+    .eq("status", "accepted")
+    .order("created_at", { ascending: false });
+
+  if (role === "builder") {
+    query = query.eq("builder_id", userId);
+  } else {
+    query = query.eq("ideas.user_id", userId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as DashboardMatch[];
+};
+
+export const getMySentLikes = async (
+  userId: string,
+): Promise<SentLike[]> => {
+  const { data, error } = await supabase
+    .from("idea_likes")
+    .select(
+      "id, idea_id, user_id, created_at, ideas ( id, title, user_id, profiles ( id, username ) )",
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const likes = (data ?? []) as Omit<SentLike, "matchStatus">[];
+  const ideaIds = likes.map((like) => like.idea_id);
+
+  if (ideaIds.length === 0) {
+    return likes.map((like) => ({ ...like, matchStatus: "pending" }));
+  }
+
+  const { data: matchData, error: matchError } = await supabase
+    .from("matches")
+    .select("idea_id")
+    .eq("builder_id", userId)
+    .eq("status", "accepted")
+    .in("idea_id", ideaIds);
+
+  if (matchError) {
+    throw matchError;
+  }
+
+  const matchedIdeas = new Set(
+    (matchData ?? []).map((match) => match.idea_id as string),
+  );
+
+  return likes.map((like) => ({
+    ...like,
+    matchStatus: matchedIdeas.has(like.idea_id) ? "accepted" : "pending",
+  }));
 };
 
 export const checkIfLiked = async (
