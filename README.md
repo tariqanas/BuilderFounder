@@ -13,4 +13,12 @@ npx shadcn-ui@latest add button input textarea card label select badge
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+## Seed data (dev/local)
+
+```bash
+npm install @supabase/supabase-js ts-node
+npx ts-node scripts/seed.ts
 ```
