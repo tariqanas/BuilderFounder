@@ -4,8 +4,8 @@ import { safeCompare } from "@/lib/security";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 
 export async function GET(request: Request) {
-  const key = request.headers.get("x-health-secret");
-  if (!safeCompare(env.HEALTHCHECK_SECRET, key)) {
+  const key = request.headers.get("x-health-key");
+  if (!safeCompare(env.HEALTH_KEY, key)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

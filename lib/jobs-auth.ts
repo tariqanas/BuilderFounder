@@ -20,3 +20,9 @@ export function isAuthorizedJobRequest(request: Request) {
 export function isAuthorizedMakeRequest(request: Request) {
   return safeCompare(env.MAKE_NOTIFY_KEY, readApiKey(request));
 }
+
+export function isAuthorizedCronRequest(request: Request) {
+  const headerKey = request.headers.get("x-cron-key");
+  const bearerKey = readApiKey(request);
+  return safeCompare(env.CRON_KEY, headerKey) || safeCompare(env.CRON_KEY, bearerKey);
+}

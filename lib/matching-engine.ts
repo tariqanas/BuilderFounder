@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 
 type UserSettingsRow = {
@@ -163,7 +164,8 @@ function parseScoreJson(raw: string): ScoreResult | null {
       reasons: parsed.reasons.slice(0, 4).map((r) => normalizeWhitespace(String(r))).filter(Boolean),
       missing: parsed.missing.slice(0, 6).map((m) => normalizeWhitespace(String(m))).filter(Boolean),
     };
-  } catch {
+  } catch (error) {
+    console.error(`[matching] ai_json_parse_failure ${(error as Error).message}`);
     return null;
   }
 }
@@ -174,7 +176,7 @@ async function scoreWithOpenAI(
   user: UserSettingsRow,
   budget: AIBudget
 ): Promise<ScoreResult | null> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) return null;
   if (budget.currentCalls >= budget.maxCalls) return null;
 
@@ -212,7 +214,7 @@ async function scoreWithOpenAI(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        model: env.OPENAI_MODEL,
         input: [
           { role: "system", content: SCORING_PROMPT },
           { role: "user", content: bodyString },
@@ -227,8 +229,16 @@ async function scoreWithOpenAI(
     }
 
     const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) return null;
-    return parseScoreJson(payload.output_text);
+    if (!payload.output_text) {
+      console.error("[matching] ai_empty_output_text");
+      return null;
+    }
+
+    const parsed = parseScoreJson(payload.output_text);
+    if (!parsed) {
+      console.error("[matching] ai_output_json_invalid");
+    }
+    return parsed;
   }
 
   // Deterministic retry policy: one retry only, then drop the offer.
@@ -252,14 +262,14 @@ export async function runMatchingEngine() {
   const service = createSupabaseServiceClient();
   const runStarted = Date.now();
 
-  const configuredAiCap = Number(process.env.MAX_AI_CALLS_PER_RUN || DEFAULT_MAX_AI_CALLS_PER_RUN);
+  const configuredAiCap = env.MAX_AI_CALLS_PER_RUN || DEFAULT_MAX_AI_CALLS_PER_RUN;
   const aiBudget: AIBudget = {
     maxCalls: Number.isFinite(configuredAiCap) && configuredAiCap > 0 ? Math.floor(configuredAiCap) : DEFAULT_MAX_AI_CALLS_PER_RUN,
     currentCalls: 0,
     estimatedTokens: 0,
   };
 
-  const simulateUsers = Number(process.env.SIMULATE_USERS || 0);
+  const simulateUsers = env.SIMULATE_USERS || 0;
 
   const { data: activeSubs, error: subError } = await service
     .from("subscriptions")
@@ -372,7 +382,7 @@ export async function runMatchingEngine() {
 
       // If AI fails (HTTP/parse), drop candidate safely for this user.
       const finalScore = aiScore ?? fallbackScore(offer, stacks);
-      if (!aiScore && process.env.OPENAI_API_KEY) {
+      if (!aiScore && env.OPENAI_API_KEY) {
         continue;
       }
 
