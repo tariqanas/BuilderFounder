@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
+import { buildMissionEmail } from "@/lib/notification-template";
 
 type UserSettingsRow = {
   user_id: string;
@@ -475,6 +476,21 @@ export async function runMatchingEngine() {
 
         if (existingQueue) continue;
 
+        const reasonList = mission.reasons
+          .split("|")
+          .map((entry) => entry.trim())
+          .filter(Boolean);
+        const emailTemplate = buildMissionEmail({
+          score: mission.score,
+          title: mission.offer.title,
+          country: mission.offer.country,
+          remote: mission.offer.remote,
+          dayRate: mission.offer.day_rate,
+          url: mission.offer.url,
+          reasons: reasonList,
+          pitch: mission.pitch,
+        });
+
         const { error: queueError } = await service.from("notification_queue").insert({
           user_id: user.user_id,
           mission_id: insertedMission.id,
@@ -483,11 +499,11 @@ export async function runMatchingEngine() {
           payload: {
             channel: channel.channel,
             to: channel.to,
-            subject: mission.subject,
-            message: mission.pitch,
+            subject: emailTemplate.subject,
+            message: emailTemplate.body,
             mission_url: mission.offer.url,
             pitch: mission.pitch,
-            reasons: mission.reasons,
+            reasons: reasonList,
           },
           status: "pending",
         });

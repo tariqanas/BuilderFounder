@@ -15,12 +15,12 @@ export async function POST(request: Request) {
   const file = formData.get("cv");
 
   if (!(file instanceof File) || file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "CV PDF invalide (max 5MB)." }, { status: 400 });
+    return NextResponse.json({ error: "Please upload a valid PDF CV (max 5MB)." }, { status: 400 });
   }
 
   const fileBuffer = Buffer.from(await file.arrayBuffer());
   if (file.type !== "application/pdf" || !isPdf(fileBuffer)) {
-    return NextResponse.json({ error: "Format invalide: PDF uniquement." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid format. PDF only." }, { status: 400 });
   }
 
   const primaryStack = formData.get("primaryStack");
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     (!notifyWhatsapp && whatsappNumber && String(whatsappNumber).trim().length > 0 && !isE164Phone(whatsappNumber)) ||
     (!notifySms && smsNumber && String(smsNumber).trim().length > 0 && !isE164Phone(smsNumber))
   ) {
-    return NextResponse.json({ error: "Validation failed" }, { status: 400 });
+    return NextResponse.json({ error: "Please review your criteria and contact details." }, { status: 400 });
   }
 
   const storagePath = `cv/${user.id}/cv.pdf`;
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
   if (storageError) {
     console.error("[upload] cv storage failed");
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json({ error: "Upload failed. Please retry." }, { status: 500 });
   }
 
   const extractedText = extractPdfText(fileBuffer);
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
 
   if (settingsError) {
     console.error("[upload] settings update failed");
-    return NextResponse.json({ error: "Settings save failed" }, { status: 500 });
+    return NextResponse.json({ error: "Settings save failed." }, { status: 500 });
   }
 
   const { error: cvError } = await supabase.from("cv_files").upsert(
@@ -102,9 +102,8 @@ export async function POST(request: Request) {
 
   if (cvError) {
     console.error("[upload] cv metadata save failed");
-    return NextResponse.json({ error: "CV save failed" }, { status: 500 });
+    return NextResponse.json({ error: "CV save failed." }, { status: 500 });
   }
 
-  const target = emptyText ? "/app?notice=cv-empty-text" : "/app?notice=radar-active";
-  return NextResponse.redirect(new URL(target, request.url), { status: 303 });
+  return NextResponse.json({ ok: true, notice: emptyText ? "cv-empty-text" : "onboarding-activated" });
 }
