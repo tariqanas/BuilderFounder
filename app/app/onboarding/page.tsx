@@ -2,7 +2,7 @@ export default function OnboardingPage() {
   return (
     <main className="card" style={{ maxWidth: 760 }}>
       <h1>Onboarding</h1>
-      <p style={{ color: "#b8b8cc" }}>Uploadez votre CV et vos critères de mission.</p>
+      <p style={{ color: "#b8b8cc" }}>Uploadez votre CV, vos critères et vos canaux de notification.</p>
 
       <form action="/api/onboarding" method="post" encType="multipart/form-data" style={{ display: "grid", gap: 12 }}>
         <div>
@@ -33,11 +33,37 @@ export default function OnboardingPage() {
           <label htmlFor="countries">Pays ciblés (séparés par des virgules)</label>
           <input id="countries" name="countries" maxLength={300} required />
         </div>
-        <div>
-          <label htmlFor="notifyEmail">Email de notifications</label>
-          <input id="notifyEmail" name="notifyEmail" type="email" required />
-        </div>
-        <button type="submit" className="btn btn-primary">Enregistrer</button>
+
+        <fieldset style={{ border: "1px solid #2b2d3c", borderRadius: 8, padding: 12 }}>
+          <legend>Notifications</legend>
+
+          <div>
+            <label htmlFor="notifyEmail" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input id="notifyEmail" name="notifyEmail" type="checkbox" defaultChecked />
+              Email (obligatoire recommandé)
+            </label>
+          </div>
+
+          <div>
+            <label htmlFor="notifyWhatsapp" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input id="notifyWhatsapp" name="notifyWhatsapp" type="checkbox" />
+              WhatsApp
+            </label>
+            <input id="whatsappNumber" name="whatsappNumber" placeholder="+33612345678" maxLength={16} />
+          </div>
+
+          <div>
+            <label htmlFor="notifySms" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input id="notifySms" name="notifySms" type="checkbox" />
+              SMS
+            </label>
+            <input id="smsNumber" name="smsNumber" placeholder="+33612345678" maxLength={16} />
+          </div>
+        </fieldset>
+
+        <button type="submit" className="btn btn-primary">
+          Enregistrer
+        </button>
       </form>
     </main>
   );

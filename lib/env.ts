@@ -7,6 +7,8 @@ const required = [
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_ID",
   "MAKE_INGEST_KEY",
+  "MAKE_NOTIFY_KEY",
+  "JOBS_API_KEY",
   "APP_URL",
   "HEALTHCHECK_SECRET",
 ] as const;
@@ -26,6 +28,8 @@ export const env = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET!,
   STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID!,
   MAKE_INGEST_KEY: process.env.MAKE_INGEST_KEY!,
+  MAKE_NOTIFY_KEY: process.env.MAKE_NOTIFY_KEY!,
+  JOBS_API_KEY: process.env.JOBS_API_KEY!,
   APP_URL: process.env.APP_URL!,
   HEALTHCHECK_SECRET: process.env.HEALTHCHECK_SECRET!,
 };

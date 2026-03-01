@@ -6,11 +6,14 @@ Stack: **Next.js 14 (App Router, TypeScript)** + **Supabase (Auth + Postgres + S
 - Landing premium minimal (`/`) avec CTA Start Beta.
 - Login email/password Supabase (`/login`).
 - Gating SSR `/app/*` par auth serveur + abonnement actif/trialing.
-- Onboarding (`/app/onboarding`) : upload CV PDF + critères, extraction texte tolérante (fallback si PDF sans texte).
+- Onboarding (`/app/onboarding`) : upload CV PDF + critères + canaux de notification.
 - Dashboard (`/app`) : radar, statut abonnement, missions de la semaine, liste paginée de missions.
 - Billing (`/billing`) : démarrer abonnement Stripe + portail client selon statut.
-- Ingestion Make.com sécurisée : `POST /api/missions/ingest` via `x-api-key` (validation stricte + rate-limit).
+- Ingestion Make.com sécurisée : `POST /api/missions/ingest` via `x-api-key`.
 - Healthcheck interne protégé : `GET /api/health`.
+- **Collecte serveur d'offres** : `POST/GET /api/jobs/offers/collect`.
+- **Matching serveur multi-tenant** : `POST/GET /api/jobs/matching/run` (cache scoring + top 3/semaine).
+- **Queue notifications** : `POST /api/notify/make/pull` et `POST /api/notify/make/ack`.
 
 ## Setup local
 1. Installer dépendances:
@@ -30,72 +33,111 @@ Stack: **Next.js 14 (App Router, TypeScript)** + **Supabase (Auth + Postgres + S
 ## Variables d'environnement
 Voir `.env.example`.
 
+Nouvelles variables backend:
+- `JOBS_API_KEY`: clé pour les jobs cron (`/api/jobs/*`).
+- `MAKE_NOTIFY_KEY`: clé pour les endpoints Make pull/ack (`/api/notify/make/*`).
+
 ## Supabase
 1. Créer un projet Supabase.
 2. Exécuter les migrations SQL dans `supabase/migrations`.
 3. Vérifier que le bucket privé `cv` existe.
 4. Activer email/password dans Auth Providers.
 
+### Schéma ajouté (multi-tenant matching)
+- `offers_raw`: stockage normalisé de toutes les offres collectées, déduplication via hash unique.
+- `user_offer_scores`: cache de scoring par `(user_id, offer_hash)` pour éviter de rescoring.
+- `notification_queue`: file d'événements de notifications à déléguer à Make.
+- `user_settings`: nouveaux flags `notify_email`, `notify_whatsapp`, `notify_sms` + numéros E.164.
+
 ### RLS policies (résumé)
-- `profiles`: l’utilisateur peut lire/insérer/mettre à jour uniquement sa ligne (`auth.uid() = user_id`).
-- `subscriptions`: l’utilisateur peut lire/insérer/mettre à jour uniquement sa ligne.
-- `user_settings`: l’utilisateur peut lire/insérer/mettre à jour uniquement sa ligne.
-- `cv_files`: l’utilisateur peut lire/insérer/mettre à jour uniquement ses données.
-- `missions`: l’utilisateur peut seulement lire ses missions (`SELECT` uniquement), pas de `INSERT/UPDATE/DELETE` côté user.
+- `profiles`, `subscriptions`, `user_settings`, `cv_files`: accès utilisateur limité à ses propres lignes.
+- `missions`: utilisateur en lecture seule sur ses missions.
+- `offers_raw`, `user_offer_scores`, `notification_queue`: **aucun accès user** (RLS deny-all), service role uniquement.
 
-## Stripe
-1. Créer un produit + price récurrent et renseigner `STRIPE_PRICE_ID`.
-2. Webhook endpoint: `POST /api/stripe/webhook`.
-3. Événements requis:
-   - `checkout.session.completed`
-   - `customer.subscription.created`
-   - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.payment_failed`
-4. Renseigner `STRIPE_WEBHOOK_SECRET`.
-
-### Test webhook en local
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
-
-## Make.com ingestion
+## Jobs serveur
+### 1) Collecte d'offres
 Endpoint:
 ```http
-POST /api/missions/ingest
-x-api-key: <MAKE_INGEST_KEY>
+POST /api/jobs/offers/collect
+x-api-key: <JOBS_API_KEY>
+```
+Sources V1:
+- RemoteOK (JSON)
+- WeWorkRemotely DevOps RSS
+- Jobicy DevOps RSS
+
+Normalisation vers `offers_raw` + hash SHA-256 `url|title|posted_at` + upsert (`onConflict=hash`).
+
+### 2) Matching multi-tenant
+Endpoint:
+```http
+POST /api/jobs/matching/run
+x-api-key: <JOBS_API_KEY>
+```
+Pipeline:
+1. Charge users `radar_active=true` avec subscription `active|trialing`.
+2. Pré-filtre rapide (pays/remote + mots-clés stack dans title/description).
+3. Limite scoring: `max 20 offres/user/run`, `max 200 offres/run`.
+4. Utilise cache `user_offer_scores` (pas de rescoring si déjà noté).
+5. Crée missions et applique `Top 3 / semaine / user` avec anti-duplicate URL.
+6. Fallback: complète avec meilleurs scores `>=70` si pas assez de KEEP.
+7. Alimente `notification_queue` (email obligatoire, WhatsApp/SMS selon settings).
+
+## Prompt IA (définitions)
+`lib/matching-engine.ts` expose:
+- `SCORING_PROMPT` → JSON strict `{score, decision, reasons, missing}`
+- `PITCH_PROMPT` → JSON strict `{subject, pitch}`
+
+Les prompts restent côté backend (source of truth), sans logique métier dans Make.
+
+## Make.com setup (notifications)
+### Endpoint pull
+```http
+POST /api/notify/make/pull
+x-api-key: <MAKE_NOTIFY_KEY>
 Content-Type: application/json
-```
 
-Payload attendu:
+{ "limit": 20 }
+```
+Retourne les items `pending` avec payloads (`channel`, `to`, `subject`, `message`, `mission_url`, `pitch`, `reasons`).
+
+### Endpoint ack
+```http
+POST /api/notify/make/ack
+x-api-key: <MAKE_NOTIFY_KEY>
+Content-Type: application/json
+
+{ "id": "<queue_id>", "status": "sent" }
+```
+ou
 ```json
-{
-  "userEmail": "john@example.com",
-  "mission": {
-    "source": "example",
-    "title": "Senior Backend Engineer",
-    "company": "Acme",
-    "country": "France",
-    "remote": "remote",
-    "dayRate": 700,
-    "url": "https://example.com/job/1",
-    "score": 92,
-    "reasons": "Stack alignée...",
-    "pitch": "Bonjour, voici pourquoi..."
-  }
-}
+{ "id": "<queue_id>", "status": "failed", "error": "provider timeout" }
 ```
 
-## Release candidate checklist (manuel)
-- [ ] Signup / login / logout.
-- [ ] Gating paywall: `/app` inaccessible sans session, puis inaccessible sans subscription active/trialing.
-- [ ] Checkout Stripe: success URL vers `/app`, cancel URL vers `/billing`.
-- [ ] Sync webhook: vérifier transitions `active`, `trialing`, `canceled`, `past_due`.
-- [ ] Portal Stripe accessible uniquement si `stripe_customer_id` présent.
-- [ ] Onboarding CV: PDF valide (OK), mauvais format (KO), fichier >5MB (KO).
-- [ ] Ingest endpoint: payload valide (OK), payload invalide (400), mauvaise API key (401).
-- [ ] Dashboard isolation: un user ne voit jamais les missions d’un autre.
-- [ ] Vérification RLS via SQL editor / API avec token utilisateur.
+### Scénario Make recommandé
+1. **Scheduler** toutes les 5 minutes.
+2. HTTP module `POST /api/notify/make/pull` (`limit=20`).
+3. Router par `channel` (`email` / `whatsapp` / `sms`).
+4. Envoi via connecteurs Make.
+5. HTTP module `POST /api/notify/make/ack` pour chaque item (`sent` ou `failed`).
+
+## Cron config
+Le fichier `vercel.json` définit deux crons (30 min):
+- `/api/jobs/offers/collect`
+- `/api/jobs/matching/run`
+
+Utiliser `Authorization: Bearer <JOBS_API_KEY>` ou `x-api-key`.
+
+## Checklist tests (manuel)
+- [ ] Migration SQL appliquée (`offers_raw`, `user_offer_scores`, `notification_queue`, nouveaux champs settings).
+- [ ] `POST /api/jobs/offers/collect` avec bonne clé → offres upsertées.
+- [ ] `POST /api/jobs/matching/run` → missions créées (max 3/semaine/user) + queue alimentée.
+- [ ] Cache scoring: 2e run sans nouvelles offres → pas de rescoring.
+- [ ] `POST /api/notify/make/pull` retourne des items `pending`.
+- [ ] `POST /api/notify/make/ack` en `sent` met à jour `status`, incrémente `attempts`.
+- [ ] `POST /api/notify/make/ack` en `failed` enregistre `last_error` + `attempts`.
+- [ ] Validation settings: E.164 requis si `notify_whatsapp=true` / `notify_sms=true`.
+- [ ] Isolation multi-tenant vérifiée (aucun accès user à `offers_raw`/`notification_queue`).
 
 ## Scripts
 - `npm run dev`
