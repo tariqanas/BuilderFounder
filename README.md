@@ -5,11 +5,12 @@ Stack: **Next.js 14 (App Router, TypeScript)** + **Supabase (Auth + Postgres + S
 ## Fonctionnalités V1
 - Landing premium minimal (`/`) avec CTA Start Beta.
 - Login email/password Supabase (`/login`).
-- Gating `/app/*` par auth + abonnement actif/trialing.
-- Onboarding (`/app/onboarding`) : upload CV PDF + critères, extraction de texte (pdf-parse).
-- Dashboard (`/app`) : statut radar, statut abonnement, 20 dernières missions, copy pitch, lien offre.
-- Billing (`/billing`) : démarrer abonnement Stripe + portail client.
-- Ingestion Make.com sécurisée : `POST /api/missions/ingest` via `x-api-key`.
+- Gating SSR `/app/*` par auth serveur + abonnement actif/trialing.
+- Onboarding (`/app/onboarding`) : upload CV PDF + critères, extraction texte tolérante (fallback si PDF sans texte).
+- Dashboard (`/app`) : radar, statut abonnement, missions de la semaine, liste paginée de missions.
+- Billing (`/billing`) : démarrer abonnement Stripe + portail client selon statut.
+- Ingestion Make.com sécurisée : `POST /api/missions/ingest` via `x-api-key` (validation stricte + rate-limit).
+- Healthcheck interne protégé : `GET /api/health`.
 
 ## Setup local
 1. Installer dépendances:
@@ -31,17 +32,26 @@ Voir `.env.example`.
 
 ## Supabase
 1. Créer un projet Supabase.
-2. Exécuter la migration SQL dans `supabase/migrations/202603010001_init.sql`.
+2. Exécuter les migrations SQL dans `supabase/migrations`.
 3. Vérifier que le bucket privé `cv` existe.
 4. Activer email/password dans Auth Providers.
+
+### RLS policies (résumé)
+- `profiles`: l’utilisateur peut lire/insérer/mettre à jour uniquement sa ligne (`auth.uid() = user_id`).
+- `subscriptions`: l’utilisateur peut lire/insérer/mettre à jour uniquement sa ligne.
+- `user_settings`: l’utilisateur peut lire/insérer/mettre à jour uniquement sa ligne.
+- `cv_files`: l’utilisateur peut lire/insérer/mettre à jour uniquement ses données.
+- `missions`: l’utilisateur peut seulement lire ses missions (`SELECT` uniquement), pas de `INSERT/UPDATE/DELETE` côté user.
 
 ## Stripe
 1. Créer un produit + price récurrent et renseigner `STRIPE_PRICE_ID`.
 2. Webhook endpoint: `POST /api/stripe/webhook`.
 3. Événements requis:
    - `checkout.session.completed`
+   - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `invoice.payment_failed`
 4. Renseigner `STRIPE_WEBHOOK_SECRET`.
 
 ### Test webhook en local
@@ -76,10 +86,16 @@ Payload attendu:
 }
 ```
 
-Réponse:
-```json
-{ "ok": true }
-```
+## Release candidate checklist (manuel)
+- [ ] Signup / login / logout.
+- [ ] Gating paywall: `/app` inaccessible sans session, puis inaccessible sans subscription active/trialing.
+- [ ] Checkout Stripe: success URL vers `/app`, cancel URL vers `/billing`.
+- [ ] Sync webhook: vérifier transitions `active`, `trialing`, `canceled`, `past_due`.
+- [ ] Portal Stripe accessible uniquement si `stripe_customer_id` présent.
+- [ ] Onboarding CV: PDF valide (OK), mauvais format (KO), fichier >5MB (KO).
+- [ ] Ingest endpoint: payload valide (OK), payload invalide (400), mauvaise API key (401).
+- [ ] Dashboard isolation: un user ne voit jamais les missions d’un autre.
+- [ ] Vérification RLS via SQL editor / API avec token utilisateur.
 
 ## Scripts
 - `npm run dev`

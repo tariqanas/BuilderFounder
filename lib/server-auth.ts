@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServiceClient, createSupabaseUserServerClient } from "@/lib/supabase";
 
 const AUTH_COOKIE = "it_sniper_access_token";
+const ACTIVE_SUBSCRIPTION = new Set(["active", "trialing"]);
 
 export function getAccessToken() {
   return cookies().get(AUTH_COOKIE)?.value;
@@ -23,6 +24,25 @@ export async function requireUser() {
 export async function getUserClientOrRedirect() {
   const { token } = await requireUser();
   return createSupabaseUserServerClient(token);
+}
+
+export async function requireActiveSubscription(userId: string) {
+  const service = createSupabaseServiceClient();
+  const { data: subscription } = await service
+    .from("subscriptions")
+    .select("status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!subscription || !ACTIVE_SUBSCRIPTION.has(subscription.status)) {
+    redirect("/billing");
+  }
+
+  return subscription;
+}
+
+export function isSubscriptionActive(status: string | null | undefined) {
+  return !!status && ACTIVE_SUBSCRIPTION.has(status);
 }
 
 export const authCookieName = AUTH_COOKIE;

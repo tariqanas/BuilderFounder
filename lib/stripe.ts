@@ -5,6 +5,8 @@ type StripeSubscription = {
   customer: string;
   status: string;
   current_period_end: number;
+  metadata?: { user_id?: string };
+  customer_email?: string | null;
 };
 
 function formEncode(input: Record<string, string>) {
@@ -47,6 +49,7 @@ export async function createCheckoutSession(customerId: string, userId: string) 
     "line_items[0][quantity]": "1",
     "allow_promotion_codes": "true",
     "metadata[user_id]": userId,
+    "subscription_data[metadata][user_id]": userId,
   });
 }
 

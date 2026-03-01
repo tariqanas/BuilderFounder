@@ -8,6 +8,7 @@ const required = [
   "STRIPE_PRICE_ID",
   "MAKE_INGEST_KEY",
   "APP_URL",
+  "HEALTHCHECK_SECRET",
 ] as const;
 
 for (const key of required) {
@@ -26,4 +27,5 @@ export const env = {
   STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID!,
   MAKE_INGEST_KEY: process.env.MAKE_INGEST_KEY!,
   APP_URL: process.env.APP_URL!,
+  HEALTHCHECK_SECRET: process.env.HEALTHCHECK_SECRET!,
 };
