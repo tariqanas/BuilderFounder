@@ -1,145 +1,142 @@
-# IT Sniper — SaaS V1
+# IT Sniper — Production Readiness
 
-Stack: **Next.js 14 (App Router, TypeScript)** + **Supabase (Auth + Postgres + Storage)** + **Stripe (Checkout + Webhook + Portal)**.
+Stack: Next.js 14 + Supabase + Stripe + Make.
 
-## Fonctionnalités V1
-- Landing premium minimal (`/`) avec CTA Start Beta.
-- Login email/password Supabase (`/login`).
-- Gating SSR `/app/*` par auth serveur + abonnement actif/trialing.
-- Onboarding (`/app/onboarding`) : upload CV PDF + critères + canaux de notification.
-- Dashboard (`/app`) : radar, statut abonnement, missions de la semaine, liste paginée de missions.
-- Billing (`/billing`) : démarrer abonnement Stripe + portail client selon statut.
-- Ingestion Make.com sécurisée : `POST /api/missions/ingest` via `x-api-key`.
-- Healthcheck interne protégé : `GET /api/health`.
-- **Collecte serveur d'offres** : `POST/GET /api/jobs/offers/collect`.
-- **Matching serveur multi-tenant** : `POST/GET /api/jobs/matching/run` (cache scoring + top 3/semaine).
-- **Queue notifications** : `POST /api/notify/make/pull` et `POST /api/notify/make/ack`.
+## Local setup
+1. `npm install`
+2. `cp .env.example .env.local`
+3. Fill all required variables.
+4. `npm run dev`
 
-## Setup local
-1. Installer dépendances:
-   ```bash
-   npm install
-   ```
-2. Copier variables d'environnement:
-   ```bash
-   cp .env.example .env.local
-   ```
-3. Renseigner toutes les variables.
-4. Démarrer:
-   ```bash
-   npm run dev
-   ```
+## Environment variables
+Use `.env.example` as source of truth.
 
-## Variables d'environnement
-Voir `.env.example`.
+### Required
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID`
+- `MAKE_INGEST_KEY`
+- `MAKE_NOTIFY_KEY`
+- `JOBS_API_KEY`
+- `CRON_KEY`
+- `HEALTH_KEY`
+- `APP_URL`
 
-Nouvelles variables backend:
-- `JOBS_API_KEY`: clé pour les jobs cron (`/api/jobs/*`).
-- `MAKE_NOTIFY_KEY`: clé pour les endpoints Make pull/ack (`/api/notify/make/*`).
+### Optional
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `MAX_AI_CALLS_PER_RUN`
+- `SIMULATE_USERS`
 
-## Supabase
-1. Créer un projet Supabase.
-2. Exécuter les migrations SQL dans `supabase/migrations`.
-3. Vérifier que le bucket privé `cv` existe.
-4. Activer email/password dans Auth Providers.
+`lib/env.ts` validates env at startup and throws fast, explicit errors for missing/invalid variables.
 
-### Schéma ajouté (multi-tenant matching)
-- `offers_raw`: stockage normalisé de toutes les offres collectées, déduplication via hash unique.
-- `user_offer_scores`: cache de scoring par `(user_id, offer_hash)` pour éviter de rescoring.
-- `notification_queue`: file d'événements de notifications à déléguer à Make.
-- `user_settings`: nouveaux flags `notify_email`, `notify_whatsapp`, `notify_sms` + numéros E.164.
+## Deployment (Vercel)
+- `vercel.json` configures Vercel Cron every 3 hours:
+  - `GET /api/cron/run`
+- The cron endpoint requires `x-cron-key: <CRON_KEY>`.
 
-### RLS policies (résumé)
-- `profiles`, `subscriptions`, `user_settings`, `cv_files`: accès utilisateur limité à ses propres lignes.
-- `missions`: utilisateur en lecture seule sur ses missions.
-- `offers_raw`, `user_offer_scores`, `notification_queue`: **aucun accès user** (RLS deny-all), service role uniquement.
+### Cron pipeline
+`/api/cron/run` executes:
+1. offers collection
+2. normalization/upsert to `offers_raw`
+3. matching
+4. queue notifications in `notification_queue`
 
-## Jobs serveur
-### 1) Collecte d'offres
-Endpoint:
-```http
-POST /api/jobs/offers/collect
-x-api-key: <JOBS_API_KEY>
-```
-Sources V1:
-- RemoteOK (JSON)
-- WeWorkRemotely DevOps RSS
-- Jobicy DevOps RSS
+It returns JSON summary counts (offers, users processed, missions, notifications, AI calls).
 
-Normalisation vers `offers_raw` + hash SHA-256 `url|title|posted_at` + upsert (`onConflict=hash`).
+## Stripe production readiness
+- Checkout uses `APP_URL` for success and cancel URLs.
+- Webhook endpoint: `/api/stripe/webhook`
+  - verifies Stripe signature from raw request body
+  - uses idempotent event handling (replay-safe) via `system_state`
 
-### 2) Matching multi-tenant
-Endpoint:
-```http
-POST /api/jobs/matching/run
-x-api-key: <JOBS_API_KEY>
-```
-Pipeline:
-1. Charge users `radar_active=true` avec subscription `active|trialing`.
-2. Pré-filtre rapide (pays/remote + mots-clés stack dans title/description).
-3. Limite scoring: `max 20 offres/user/run`, `max 200 offres/run`.
-4. Utilise cache `user_offer_scores` (pas de rescoring si déjà noté).
-5. Crée missions et applique `Top 3 / semaine / user` avec anti-duplicate URL.
-6. Fallback: complète avec meilleurs scores `>=70` si pas assez de KEEP.
-7. Alimente `notification_queue` (email obligatoire, WhatsApp/SMS selon settings).
+### Stripe dashboard setup
+1. Configure webhook URL:
+   - `https://<your-domain>/api/stripe/webhook`
+2. Enable events:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+3. Test fully in Stripe test mode first.
+4. Switch to live keys and live webhook secret only after successful test flow.
 
-## Prompt IA (définitions)
-`lib/matching-engine.ts` expose:
-- `SCORING_PROMPT` → JSON strict `{score, decision, reasons, missing}`
-- `PITCH_PROMPT` → JSON strict `{subject, pitch}`
+## Supabase production readiness
+1. Create Supabase project.
+2. Apply all SQL migrations in `supabase/migrations`.
+3. Create storage bucket `cv` as **private**.
+4. Keep RLS enabled on all tables (including deny-all service-only tables).
+5. CV upload path is `cv/<userId>/cv.pdf`.
+6. Service role key is server-side only (never expose client-side).
 
-Les prompts restent côté backend (source of truth), sans logique métier dans Make.
+## Make production readiness
+Endpoints requiring API key:
+- `POST /api/missions/ingest` (uses `MAKE_INGEST_KEY`)
+- `POST /api/notify/make/pull` (uses `MAKE_NOTIFY_KEY`)
+- `POST /api/notify/make/ack` (uses `MAKE_NOTIFY_KEY`)
 
-## Make.com setup (notifications)
-### Endpoint pull
-```http
-POST /api/notify/make/pull
-x-api-key: <MAKE_NOTIFY_KEY>
-Content-Type: application/json
+You can keep two keys or set both env vars to the same secret for a single-key setup.
 
-{ "limit": 20 }
-```
-Retourne les items `pending` avec payloads (`channel`, `to`, `subject`, `message`, `mission_url`, `pitch`, `reasons`).
+### Recommended Make scenario
+1. Scheduler every 5 minutes.
+2. Call pull endpoint (`limit: 20`).
+3. Router by channel (`email`, `whatsapp`, `sms`).
+4. Send message via chosen provider.
+5. Call ack endpoint with:
+   - `status: sent`, or
+   - `status: failed` + `error` message.
 
-### Endpoint ack
-```http
-POST /api/notify/make/ack
-x-api-key: <MAKE_NOTIFY_KEY>
-Content-Type: application/json
+## Logging and visibility
+Minimal server logs added for:
+- cron start/end/failure + summary counts
+- Stripe webhook signature/process failures
+- Make pull/ack failures
+- OpenAI HTTP and JSON parse failures
 
-{ "id": "<queue_id>", "status": "sent" }
-```
-ou
-```json
-{ "id": "<queue_id>", "status": "failed", "error": "provider timeout" }
-```
+Sensitive content (CV text, personal payload content) is not logged.
 
-### Scénario Make recommandé
-1. **Scheduler** toutes les 5 minutes.
-2. HTTP module `POST /api/notify/make/pull` (`limit=20`).
-3. Router par `channel` (`email` / `whatsapp` / `sms`).
-4. Envoi via connecteurs Make.
-5. HTTP module `POST /api/notify/make/ack` pour chaque item (`sent` ou `failed`).
+## Health endpoint
+- `GET /api/health`
+- Header required: `x-health-key: <HEALTH_KEY>`
+- Checks Supabase DB connectivity.
 
-## Cron config
-Le fichier `vercel.json` définit deux crons (30 min):
-- `/api/jobs/offers/collect`
-- `/api/jobs/matching/run`
+## Production Runbook
+1. **Create Supabase project**
+   - Run SQL migrations.
+   - Create private bucket `cv`.
+   - Verify RLS policies.
+2. **Configure Vercel env vars**
+   - Add all required variables from `.env.example`.
+3. **Stripe setup**
+   - Create product + recurring price, set `STRIPE_PRICE_ID`.
+   - Configure webhook URL/events.
+   - Validate in test mode.
+4. **Deploy to staging**
+   - `npm run build` locally first.
+   - Deploy to Vercel preview/staging.
+5. **Set Cron security**
+   - Ensure `CRON_KEY` is present.
+   - Verify cron calls include `x-cron-key`.
+6. **Configure Make scenario**
+   - Schedule every 5 minutes.
+   - pull -> route -> send -> ack.
+7. **Promote to production**
+   - switch Stripe to live keys/secrets
+   - deploy to production domain
+8. **E2E smoke test checklist**
+   - signup/login
+   - checkout payment success
+   - onboarding + CV upload
+   - offers seeded or wait cron
+   - notification received
+   - dashboard mission visible
 
-Utiliser `Authorization: Bearer <JOBS_API_KEY>` ou `x-api-key`.
-
-## Checklist tests (manuel)
-- [ ] Migration SQL appliquée (`offers_raw`, `user_offer_scores`, `notification_queue`, nouveaux champs settings).
-- [ ] `POST /api/jobs/offers/collect` avec bonne clé → offres upsertées.
-- [ ] `POST /api/jobs/matching/run` → missions créées (max 3/semaine/user) + queue alimentée.
-- [ ] Cache scoring: 2e run sans nouvelles offres → pas de rescoring.
-- [ ] `POST /api/notify/make/pull` retourne des items `pending`.
-- [ ] `POST /api/notify/make/ack` en `sent` met à jour `status`, incrémente `attempts`.
-- [ ] `POST /api/notify/make/ack` en `failed` enregistre `last_error` + `attempts`.
-- [ ] Validation settings: E.164 requis si `notify_whatsapp=true` / `notify_sms=true`.
-- [ ] Isolation multi-tenant vérifiée (aucun accès user à `offers_raw`/`notification_queue`).
-
-## Scripts
+## Commands
 - `npm run dev`
-- `npm run build`
 - `npm run lint`
+- `npm run build`

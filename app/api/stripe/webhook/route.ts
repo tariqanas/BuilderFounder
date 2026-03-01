@@ -28,14 +28,32 @@ async function resolveUserId(service: ReturnType<typeof createSupabaseServiceCli
   return data?.user_id ?? null;
 }
 
-async function upsertSubscription(service: ReturnType<typeof createSupabaseServiceClient>, data: {
-  user_id: string;
-  stripe_customer_id?: string;
-  stripe_subscription_id?: string;
-  status: string;
-  current_period_end?: string | null;
-}) {
+async function upsertSubscription(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  data: {
+    user_id: string;
+    stripe_customer_id?: string;
+    stripe_subscription_id?: string;
+    status: string;
+    current_period_end?: string | null;
+  }
+) {
   await service.from("subscriptions").upsert(data, { onConflict: "user_id" });
+}
+
+async function reserveEvent(service: ReturnType<typeof createSupabaseServiceClient>, eventId: string) {
+  const key = `stripe_event:${eventId}`;
+  await service.from("system_state").upsert({ key, value: "processing" }, { onConflict: "key", ignoreDuplicates: true });
+
+  const { data, error } = await service
+    .from("system_state")
+    .update({ value: "processed" })
+    .eq("key", key)
+    .eq("value", "processing")
+    .select("key")
+    .maybeSingle();
+
+  return !error && !!data;
 }
 
 export async function POST(request: Request) {
@@ -49,8 +67,18 @@ export async function POST(request: Request) {
     const event = parseWebhookEvent(JSON.parse(rawBody));
     const service = createSupabaseServiceClient();
 
+    if (!event.id) {
+      console.error("[stripe-webhook] missing event id");
+      return NextResponse.json({ error: "Invalid event payload" }, { status: 400 });
+    }
+
+    const shouldProcess = await reserveEvent(service, event.id);
+    if (!shouldProcess) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+
     if (event.type === "checkout.session.completed") {
-      const session = event.data;
+      const session = (event.data ?? {}) as { metadata?: { user_id?: string }; customer_details?: { email?: string | null }; customer_email?: string | null; customer?: string; subscription?: string };
       const userId = await resolveUserId(service, session.metadata?.user_id, session.customer_details?.email ?? session.customer_email);
 
       if (userId) {
@@ -79,15 +107,15 @@ export async function POST(request: Request) {
     }
 
     if (event.type === "invoice.payment_failed") {
-      const invoice = event.data;
+      const invoice = (event.data ?? {}) as { customer?: string };
       if (invoice.customer) {
         await service.from("subscriptions").update({ status: "past_due" }).eq("stripe_customer_id", String(invoice.customer));
       }
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
-    console.error("[stripe-webhook] processing failure");
+  } catch (error) {
+    console.error(`[stripe-webhook] processing failure ${(error as Error).message}`);
     return NextResponse.json({ error: "Webhook processing error" }, { status: 500 });
   }
 }

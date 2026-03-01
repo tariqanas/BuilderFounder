@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (fetchError || !current) {
+    console.error("[make-ack] queue item lookup failed");
     return NextResponse.json({ ok: false, error: "Queue item not found" }, { status: 404 });
   }
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     .eq("id", body.id);
 
   if (updateError) {
+    console.error("[make-ack] queue ack update failed");
     return NextResponse.json({ ok: false, error: "Ack update failed" }, { status: 500 });
   }
 

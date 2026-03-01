@@ -9,6 +9,12 @@ type StripeSubscription = {
   customer_email?: string | null;
 };
 
+type StripeEvent = {
+  id: string;
+  type: string;
+  data: unknown;
+};
+
 function formEncode(input: Record<string, string>) {
   return new URLSearchParams(input).toString();
 }
@@ -60,8 +66,9 @@ export async function createPortalSession(customerId: string) {
   });
 }
 
-export function parseWebhookEvent(payload: any): { type: string; data: any } {
-  return { type: payload?.type ?? "", data: payload?.data?.object ?? {} };
+export function parseWebhookEvent(payload: unknown): StripeEvent {
+  const parsed = (payload ?? {}) as { id?: string; type?: string; data?: { object?: unknown } };
+  return { id: parsed.id ?? "", type: parsed.type ?? "", data: parsed.data?.object ?? {} };
 }
 
-export type { StripeSubscription };
+export type { StripeSubscription, StripeEvent };

@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Validation failed" }, { status: 400 });
   }
 
-  const storagePath = `${user.id}/cv.pdf`;
+  const storagePath = `cv/${user.id}/cv.pdf`;
   const { error: storageError } = await supabase.storage.from("cv").upload(storagePath, fileBuffer, {
     upsert: true,
     contentType: "application/pdf",

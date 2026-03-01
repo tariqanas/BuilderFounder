@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     .limit(limit);
 
   if (error) {
+    console.error("[make-pull] queue fetch failed");
     return NextResponse.json({ ok: false, error: "Queue fetch failed" }, { status: 500 });
   }
 

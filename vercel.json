@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/jobs/offers/collect",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/jobs/matching/run",
-      "schedule": "*/30 * * * *"
+      "path": "/api/cron/run",
+      "schedule": "0 */3 * * *"
     }
   ]
 }

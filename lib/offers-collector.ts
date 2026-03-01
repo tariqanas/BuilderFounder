@@ -40,10 +40,19 @@ function buildHash(url: string, title: string, postedAt: string | null) {
   return crypto.createHash("sha256").update(`${url}|${title}|${postedAt ?? ""}`).digest("hex");
 }
 
+type RemoteOkRow = {
+  position?: string;
+  url?: string;
+  date?: string;
+  company?: string;
+  location?: string;
+  description?: string;
+};
+
 async function fetchJson(url: string) {
   const response = await fetch(url, { next: { revalidate: 0 } });
-  if (!response.ok) return [] as any[];
-  return (await response.json()) as any[];
+  if (!response.ok) return [] as RemoteOkRow[];
+  return (await response.json()) as RemoteOkRow[];
 }
 
 function readTag(input: string, tag: string) {
@@ -68,7 +77,7 @@ async function fetchRss(url: string) {
   return parseRssItems(xml);
 }
 
-function normalizeRemoteOk(rows: any[]): NormalizedOffer[] {
+function normalizeRemoteOk(rows: RemoteOkRow[]): NormalizedOffer[] {
   return rows
     .filter((row) => row?.position && row?.url)
     .map((row) => {
