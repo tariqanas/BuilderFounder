@@ -16,6 +16,10 @@ export function isValidUrl(value: unknown, max = 2048): value is string {
   }
 }
 
+export function isE164Phone(value: unknown): value is string {
+  return typeof value === "string" && /^\+[1-9][0-9]{7,14}$/.test(value);
+}
+
 export function toInt(value: unknown, min: number, max: number): number | null {
   const n = typeof value === "string" ? Number(value) : typeof value === "number" ? value : NaN;
   if (!Number.isFinite(n)) return null;

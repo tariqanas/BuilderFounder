@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase";
-import { extractPdfText, isEmail, isNonEmptyString, toInt } from "@/lib/validators";
+import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 
 function isPdf(buffer: Buffer) {
@@ -28,7 +28,11 @@ export async function POST(request: Request) {
   const minDayRate = formData.get("minDayRate");
   const remotePreference = formData.get("remotePreference");
   const countries = formData.get("countries");
-  const notifyEmail = formData.get("notifyEmail");
+  const notifyEmail = formData.get("notifyEmail") === "on";
+  const notifyWhatsapp = formData.get("notifyWhatsapp") === "on";
+  const whatsappNumber = formData.get("whatsappNumber");
+  const notifySms = formData.get("notifySms") === "on";
+  const smsNumber = formData.get("smsNumber");
 
   const minDayRateInt = toInt(minDayRate, 1, 10000);
   const allowedRemote = remotePreference === "remote" || remotePreference === "hybrid" || remotePreference === "onsite";
@@ -39,7 +43,10 @@ export async function POST(request: Request) {
     minDayRateInt === null ||
     !allowedRemote ||
     !isNonEmptyString(countries, 100) ||
-    !isEmail(notifyEmail)
+    (notifyWhatsapp && !isE164Phone(whatsappNumber)) ||
+    (notifySms && !isE164Phone(smsNumber)) ||
+    (!notifyWhatsapp && whatsappNumber && String(whatsappNumber).trim().length > 0 && !isE164Phone(whatsappNumber)) ||
+    (!notifySms && smsNumber && String(smsNumber).trim().length > 0 && !isE164Phone(smsNumber))
   ) {
     return NextResponse.json({ error: "Validation failed" }, { status: 400 });
   }
@@ -70,6 +77,10 @@ export async function POST(request: Request) {
         .map((country) => country.trim())
         .filter(Boolean),
       notify_email: notifyEmail,
+      notify_whatsapp: notifyWhatsapp,
+      whatsapp_number: notifyWhatsapp ? String(whatsappNumber) : null,
+      notify_sms: notifySms,
+      sms_number: notifySms ? String(smsNumber) : null,
       radar_active: true,
     },
     { onConflict: "user_id" }
