@@ -4,6 +4,13 @@ import { MissionList } from "@/components/mission-list";
 
 const PAGE_SIZE = 20;
 
+function toReasons(value: string | null) {
+  return String(value ?? "")
+    .split("|")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -32,7 +39,7 @@ export default async function DashboardPage({
   const to = from + PAGE_SIZE;
   const { data: missionsData } = await supabase
     .from("missions")
-    .select("id,title,company,score,pitch,url")
+    .select("id,title,company,score,pitch,url,reasons")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .range(from, to);
@@ -46,37 +53,54 @@ export default async function DashboardPage({
     score: Number(m.score ?? 0),
     pitch: m.pitch ?? "",
     url: m.url,
+    reasons: toReasons(m.reasons),
   }));
 
   const hasMore = missions.length > PAGE_SIZE;
 
   return (
     <main style={{ display: "grid", gap: 16 }}>
-      {searchParams?.notice === "radar-active" && <p className="card">Radar active</p>}
-      {searchParams?.notice === "cv-empty-text" && (
-        <p className="card">CV enregistré, mais aucun texte exploitable détecté dans le PDF.</p>
-      )}
-      <section className="card" style={{ display: "grid", gap: 8 }}>
-        <h1>Dashboard</h1>
-        <p>
-          Radar: <strong>{settings?.radar_active ? "ACTIVE" : "INACTIVE"}</strong>
-        </p>
-        <p>
-          Subscription: <strong>{subscription?.status?.toUpperCase() ?? "INACTIVE"}</strong>
-        </p>
-        <p>
-          Missions this week: <strong>{missionsThisWeek ?? 0}</strong>
-        </p>
-        <p>
-          Renouvellement: {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "-"}
-        </p>
-        <Link href="/billing" className="btn" style={{ width: "fit-content" }}>
-          Gérer l&apos;abonnement
-        </Link>
+            {searchParams?.notice === "onboarding-activated" && <p className="card">Success. Radar is now active.</p>}
+      {searchParams?.notice === "radar-activated" && <p className="card">Radar activated.</p>}
+      {searchParams?.notice === "radar-paused" && <p className="card">Radar paused.</p>}
+      {searchParams?.notice === "radar-update-failed" && <p className="card">Unable to update radar status right now.</p>}
+      {searchParams?.notice === "cv-empty-text" && <p className="card">CV saved, but no extractable text was detected in the PDF.</p>}
+
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        <article className="card" style={{ display: "grid", gap: 4 }}>
+          <span className="muted">Subscription</span>
+          <strong>{subscription?.status?.toUpperCase() ?? "INACTIVE"}</strong>
+          <Link href="/billing" className="muted" style={{ fontSize: "0.9rem" }}>
+            Manage billing
+          </Link>
+        </article>
+
+        <article className="card" style={{ display: "grid", gap: 8 }}>
+          <span className="muted">Radar status</span>
+          <strong>{settings?.radar_active ? "ACTIVE" : "INACTIVE"}</strong>
+          <form action="/api/radar/toggle" method="post">
+            <button className="btn" type="submit">
+              {settings?.radar_active ? "Pause Radar" : "Activate Radar"}
+            </button>
+          </form>
+        </article>
+
+        <article className="card" style={{ display: "grid", gap: 4 }}>
+          <span className="muted">Missions this week</span>
+          <strong>{missionsThisWeek ?? 0}</strong>
+          <span className="muted" style={{ fontSize: "0.9rem" }}>
+            Renews {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "-"}
+          </span>
+        </article>
       </section>
 
       <section className="card" style={{ display: "grid", gap: 10 }}>
-        <h2>Dernières missions</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <h2 style={{ margin: 0 }}>Mission signals</h2>
+          <Link href="/app/settings" className="muted" style={{ fontSize: "0.9rem" }}>
+            Settings
+          </Link>
+        </div>
         <MissionList missions={safeMissions} />
         {hasMore && (
           <Link href={`/app?page=${page + 1}`} className="btn" style={{ width: "fit-content" }}>

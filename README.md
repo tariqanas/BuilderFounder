@@ -140,3 +140,39 @@ Sensitive content (CV text, personal payload content) is not logged.
 - `npm run dev`
 - `npm run lint`
 - `npm run build`
+
+
+## Notification email template standard
+All mission emails should follow this structure (implemented in `lib/notification-template.ts`):
+
+- Subject: `Mission match {{score}}% — {{title}}`
+- Body:
+  1. One-line intro
+  2. Mission summary block (`country`, `remote`, `day rate`, `link`)
+  3. `Why you` section (up to 3 bullets)
+  4. `Pitch ready` section
+  5. Footer disclaimer: `IT Sniper is a decision tool. No guarantee of outcomes.`
+
+Template string:
+
+```txt
+Subject: Mission match {{score}}% — {{title}}
+
+New mission signal for your radar.
+
+Mission: {{title}}
+Location: {{country}}
+Mode: {{remote}}
+Day rate: {{dayRate}}
+Link: {{url}}
+
+Why you:
+- {{reason_1}}
+- {{reason_2}}
+- {{reason_3}}
+
+Pitch ready:
+{{pitch}}
+
+IT Sniper is a decision tool. No guarantee of outcomes.
+```

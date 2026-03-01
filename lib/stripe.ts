@@ -49,7 +49,7 @@ export async function createCheckoutSession(customerId: string, userId: string) 
   return stripeRequest<{ url: string }>("checkout/sessions", {
     mode: "subscription",
     customer: customerId,
-    success_url: `${env.APP_URL}/app`,
+    success_url: `${env.APP_URL}/billing?checkout=success`,
     cancel_url: `${env.APP_URL}/billing`,
     "line_items[0][price]": env.STRIPE_PRICE_ID,
     "line_items[0][quantity]": "1",
