@@ -3,6 +3,10 @@ import { createSupabaseServiceClient } from "@/lib/supabase";
 import { extractPdfText, isEmail, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 
+function isPdf(buffer: Buffer) {
+  return buffer.subarray(0, 4).toString() === "%PDF";
+}
+
 export async function POST(request: Request) {
   const { user } = await requireUser();
   const supabase = createSupabaseServiceClient();
@@ -10,8 +14,13 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get("cv");
 
-  if (!(file instanceof File) || file.type !== "application/pdf" || file.size > 8 * 1024 * 1024) {
-    return NextResponse.json({ error: "CV PDF invalide (max 8MB)." }, { status: 400 });
+  if (!(file instanceof File) || file.size > 5 * 1024 * 1024) {
+    return NextResponse.json({ error: "CV PDF invalide (max 5MB)." }, { status: 400 });
+  }
+
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  if (file.type !== "application/pdf" || !isPdf(fileBuffer)) {
+    return NextResponse.json({ error: "Format invalide: PDF uniquement." }, { status: 400 });
   }
 
   const primaryStack = formData.get("primaryStack");
@@ -21,7 +30,7 @@ export async function POST(request: Request) {
   const countries = formData.get("countries");
   const notifyEmail = formData.get("notifyEmail");
 
-  const minDayRateInt = toInt(minDayRate, 0, 10000);
+  const minDayRateInt = toInt(minDayRate, 1, 10000);
   const allowedRemote = remotePreference === "remote" || remotePreference === "hybrid" || remotePreference === "onsite";
 
   if (
@@ -29,25 +38,25 @@ export async function POST(request: Request) {
     (secondaryStack && !isNonEmptyString(secondaryStack, 120)) ||
     minDayRateInt === null ||
     !allowedRemote ||
-    !isNonEmptyString(countries, 300) ||
+    !isNonEmptyString(countries, 100) ||
     !isEmail(notifyEmail)
   ) {
     return NextResponse.json({ error: "Validation failed" }, { status: 400 });
   }
 
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
-  const storagePath = `cv/${user.id}/cv.pdf`;
-
+  const storagePath = `${user.id}/cv.pdf`;
   const { error: storageError } = await supabase.storage.from("cv").upload(storagePath, fileBuffer, {
     upsert: true,
     contentType: "application/pdf",
   });
 
   if (storageError) {
-    return NextResponse.json({ error: storageError.message }, { status: 500 });
+    console.error("[upload] cv storage failed");
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
   const extractedText = extractPdfText(fileBuffer);
+  const emptyText = !extractedText.length;
 
   const { error: settingsError } = await supabase.from("user_settings").upsert(
     {
@@ -67,18 +76,24 @@ export async function POST(request: Request) {
   );
 
   if (settingsError) {
-    return NextResponse.json({ error: settingsError.message }, { status: 500 });
+    console.error("[upload] settings update failed");
+    return NextResponse.json({ error: "Settings save failed" }, { status: 500 });
   }
 
-  const { error: cvError } = await supabase.from("cv_files").insert({
-    user_id: user.id,
-    storage_path: storagePath,
-    extracted_text: extractedText,
-  });
+  const { error: cvError } = await supabase.from("cv_files").upsert(
+    {
+      user_id: user.id,
+      storage_path: storagePath,
+      extracted_text: extractedText,
+    },
+    { onConflict: "user_id" }
+  );
 
   if (cvError) {
-    return NextResponse.json({ error: cvError.message }, { status: 500 });
+    console.error("[upload] cv metadata save failed");
+    return NextResponse.json({ error: "CV save failed" }, { status: 500 });
   }
 
-  return NextResponse.redirect(new URL("/app", request.url), { status: 303 });
+  const target = emptyText ? "/app?notice=cv-empty-text" : "/app?notice=radar-active";
+  return NextResponse.redirect(new URL(target, request.url), { status: 303 });
 }
