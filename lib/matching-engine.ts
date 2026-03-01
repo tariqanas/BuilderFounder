@@ -26,13 +26,40 @@ type OfferRow = {
   hash: string;
 };
 
+type ScoreResult = {
+  score: number;
+  decision: "KEEP" | "DROP";
+  reasons: string[];
+  missing: string[];
+};
+
+type CachedScoreRow = {
+  offer_hash: string;
+  score: number;
+  decision: "KEEP" | "DROP";
+  reasons: string;
+  missing: string | null;
+  subject: string;
+  pitch: string;
+};
+
+type AIBudget = {
+  maxCalls: number;
+  currentCalls: number;
+  estimatedTokens: number;
+};
+
+// Hard caps to keep matching cost and latency bounded at 100-500 concurrent users.
 const MAX_OFFERS_PER_USER = 20;
-const MAX_SCORING_TOTAL = 200;
+const MAX_OFFERS_TOTAL = 300;
+const WEEKLY_MAX_MISSIONS = 3;
+
+const DEFAULT_MAX_AI_CALLS_PER_RUN = 300;
 
 export const SCORING_PROMPT = `You are a technical staffing scorer.
 Return strict JSON only: {"score":number,"decision":"KEEP"|"DROP","reasons":string[],"missing":string[]}
 Rules:
-- score 0..100
+- score 0..100 integer
 - KEEP only if constraints match and relevance is high
 - reasons max 4 short technical points
 - missing lists blockers
@@ -45,41 +72,34 @@ Rules:
 - pitch <= 500 chars
 - technical, concrete, no generic AI wording.`;
 
-function textContainsAny(haystack: string, needles: string[]) {
-  const lower = haystack.toLowerCase();
-  return needles.some((needle) => lower.includes(needle.toLowerCase()));
+function normalizeWhitespace(text: string) {
+  return text.replace(/\s+/g, " ").trim();
 }
 
-function truncateForScoring(text: string | null) {
-  return (text ?? "").slice(0, 1500);
+function stripHtml(text: string) {
+  return text.replace(/<[^>]*>/g, " ");
 }
 
-function heuristicScore(offer: OfferRow, stacks: string[]) {
-  const corpus = `${offer.title} ${truncateForScoring(offer.description)}`;
-  const matches = stacks.filter((stack) => corpus.toLowerCase().includes(stack.toLowerCase()));
-  const score = Math.min(60 + matches.length * 12 + ((offer.remote ?? "").toLowerCase().includes("remote") ? 5 : 0), 99);
-  const decision: "KEEP" | "DROP" = score >= 75 ? "KEEP" : "DROP";
-  return {
-    score,
-    decision,
-    reasons: matches.length
-      ? [`Stack match: ${matches.join(", ")}`, offer.remote ? `Mode ${offer.remote}` : "Mode unspecified"]
-      : ["Low stack overlap"],
-    missing: matches.length ? [] : ["Stack keywords missing in title/description"],
-  };
+function cleanDescription(text: string | null) {
+  const raw = text ?? "";
+  const withoutHtml = stripHtml(raw);
+  const normalized = normalizeWhitespace(withoutHtml);
+  return normalized.slice(0, 1500);
 }
 
-function makePitch(offer: OfferRow, reasons: string[]) {
-  return {
-    subject: `${offer.title} — profil DevOps/Cloud compatible`,
-    pitch: `Bonjour, mission ${offer.title} alignée. Raisons: ${reasons.slice(0, 2).join("; ")}. Je peux contribuer rapidement sur le delivery et la fiabilité plateforme.`,
-  };
+function estimateTokens(text: string) {
+  return Math.ceil(text.length / 4);
+}
+
+function textContains(haystack: string, needle: string) {
+  return haystack.toLowerCase().includes(needle.toLowerCase());
 }
 
 function countryMatch(offerCountry: string | null, countries: string[]) {
   if (!countries.length) return true;
   if (!offerCountry) return false;
-  return countries.some((country) => offerCountry.toLowerCase().includes(country.toLowerCase()));
+  const lc = offerCountry.toLowerCase();
+  return countries.some((country) => lc.includes(country.toLowerCase()));
 }
 
 function remoteMatch(offerRemote: string | null, remotePreference: string | null) {
@@ -89,19 +109,157 @@ function remoteMatch(offerRemote: string | null, remotePreference: string | null
   return mode.includes("onsite");
 }
 
-function weekWindow() {
+function dayRateMatch(offerDayRate: number | null, minDayRate: number | null) {
+  if (minDayRate === null || minDayRate === undefined) return true;
+  if (offerDayRate === null || offerDayRate === undefined) return false;
+  return Number(offerDayRate) >= Number(minDayRate);
+}
+
+function deterministicPreFilter(user: UserSettingsRow, offerPool: OfferRow[]) {
+  // Layer 1: deterministic filter only, no AI calls.
+  const searchCorpus = (offer: OfferRow) => `${offer.title} ${offer.description ?? ""}`;
+  return offerPool
+    .filter((offer) => countryMatch(offer.country, user.countries ?? []))
+    .filter((offer) => remoteMatch(offer.remote, user.remote_preference))
+    .filter((offer) => textContains(searchCorpus(offer), user.primary_stack))
+    .filter((offer) => dayRateMatch(offer.day_rate, user.min_day_rate));
+}
+
+function weekWindowParis() {
   const now = new Date();
-  const monday = new Date(now);
-  const day = monday.getUTCDay();
-  monday.setUTCDate(monday.getUTCDate() + (day === 0 ? -6 : 1 - day));
-  monday.setUTCHours(0, 0, 0, 0);
-  const end = new Date(monday);
-  end.setUTCDate(monday.getUTCDate() + 7);
-  return { start: monday.toISOString(), end: end.toISOString() };
+  const parisDate = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+  const day = parisDate.getDay() || 7;
+  parisDate.setHours(0, 0, 0, 0);
+  parisDate.setDate(parisDate.getDate() - day + 1);
+  const end = new Date(parisDate);
+  end.setDate(parisDate.getDate() + 7);
+  return {
+    start: parisDate.toISOString(),
+    end: end.toISOString(),
+  };
+}
+
+function fallbackScore(offer: OfferRow, stacks: string[]): ScoreResult {
+  const corpus = `${offer.title} ${cleanDescription(offer.description)}`.toLowerCase();
+  const matches = stacks.filter((stack) => corpus.includes(stack.toLowerCase()));
+  const score = Math.min(55 + matches.length * 15 + ((offer.remote ?? "").toLowerCase().includes("remote") ? 5 : 0), 95);
+  return {
+    score,
+    decision: score >= 70 ? "KEEP" : "DROP",
+    reasons: matches.length ? [`Stack overlap: ${matches.join(", ")}`] : ["Weak stack overlap"],
+    missing: matches.length ? [] : ["Missing matching stack keywords"],
+  };
+}
+
+function parseScoreJson(raw: string): ScoreResult | null {
+  try {
+    const parsed = JSON.parse(raw) as Partial<ScoreResult>;
+    if (typeof parsed.score !== "number") return null;
+    if (parsed.decision !== "KEEP" && parsed.decision !== "DROP") return null;
+    if (!Array.isArray(parsed.reasons) || !Array.isArray(parsed.missing)) return null;
+    return {
+      score: Math.max(0, Math.min(100, Math.round(parsed.score))),
+      decision: parsed.decision,
+      reasons: parsed.reasons.slice(0, 4).map((r) => normalizeWhitespace(String(r))).filter(Boolean),
+      missing: parsed.missing.slice(0, 6).map((m) => normalizeWhitespace(String(m))).filter(Boolean),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function scoreWithOpenAI(
+  offer: OfferRow,
+  stacks: string[],
+  user: UserSettingsRow,
+  budget: AIBudget
+): Promise<ScoreResult | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  if (budget.currentCalls >= budget.maxCalls) return null;
+
+  const content = cleanDescription(offer.description);
+  const promptBody = {
+    user_preferences: {
+      primary_stack: user.primary_stack,
+      secondary_stack: user.secondary_stack,
+      min_day_rate: user.min_day_rate,
+      remote_preference: user.remote_preference,
+      countries: user.countries ?? [],
+    },
+    stacks,
+    offer: {
+      title: offer.title,
+      company: offer.company,
+      country: offer.country,
+      remote: offer.remote,
+      day_rate: offer.day_rate,
+      description: content,
+    },
+  };
+  const bodyString = JSON.stringify(promptBody);
+  const estimated = estimateTokens(bodyString) + estimateTokens(SCORING_PROMPT);
+  budget.estimatedTokens += estimated;
+
+  async function doCall() {
+    budget.currentCalls += 1;
+    console.log(`[matching] ai_call=${budget.currentCalls}/${budget.maxCalls} est_tokens=${estimated}`);
+
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        input: [
+          { role: "system", content: SCORING_PROMPT },
+          { role: "user", content: bodyString },
+        ],
+        max_output_tokens: 220,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`[matching] ai_http_error status=${response.status}`);
+      return null;
+    }
+
+    const payload = (await response.json()) as { output_text?: string };
+    if (!payload.output_text) return null;
+    return parseScoreJson(payload.output_text);
+  }
+
+  // Deterministic retry policy: one retry only, then drop the offer.
+  const firstTry = await doCall();
+  if (firstTry) return firstTry;
+  const secondTry = await doCall();
+  if (secondTry) return secondTry;
+
+  console.warn(`[matching] drop_offer_after_json_fail offer_hash=${offer.hash} user_id=${user.user_id}`);
+  return null;
+}
+
+function makePitch(offer: OfferRow, reasons: string[]) {
+  return {
+    subject: `${offer.title} — profil DevOps/Cloud compatible`,
+    pitch: `Bonjour, mission ${offer.title} alignée. Raisons: ${reasons.slice(0, 2).join("; ")}. Je peux contribuer rapidement sur le delivery et la fiabilité plateforme.`,
+  };
 }
 
 export async function runMatchingEngine() {
   const service = createSupabaseServiceClient();
+  const runStarted = Date.now();
+
+  const configuredAiCap = Number(process.env.MAX_AI_CALLS_PER_RUN || DEFAULT_MAX_AI_CALLS_PER_RUN);
+  const aiBudget: AIBudget = {
+    maxCalls: Number.isFinite(configuredAiCap) && configuredAiCap > 0 ? Math.floor(configuredAiCap) : DEFAULT_MAX_AI_CALLS_PER_RUN,
+    currentCalls: 0,
+    estimatedTokens: 0,
+  };
+
+  const simulateUsers = Number(process.env.SIMULATE_USERS || 0);
 
   const { data: activeSubs, error: subError } = await service
     .from("subscriptions")
@@ -111,7 +269,7 @@ export async function runMatchingEngine() {
 
   const eligibleUserIds = (activeSubs ?? []).map((sub) => sub.user_id);
   if (!eligibleUserIds.length) {
-    return { users: 0, createdMissions: 0, queuedNotifications: 0, remainingBudget: MAX_SCORING_TOTAL };
+    return { users: 0, createdMissions: 0, queuedNotifications: 0, aiCalls: 0, aiEstimatedTokens: 0 };
   }
 
   const { data: users, error: usersError } = await service
@@ -123,9 +281,12 @@ export async function runMatchingEngine() {
     .in("user_id", eligibleUserIds);
   if (usersError) throw new Error("matching_users_failed");
 
+  const runUsers = ((users ?? []) as UserSettingsRow[]);
+  const scopedUsers = simulateUsers > 0 ? runUsers.slice(0, Math.max(0, Math.floor(simulateUsers))) : runUsers;
+
   const { data: profiles } = await service.from("profiles").select("user_id, email").in(
     "user_id",
-    (users ?? []).map((u) => u.user_id)
+    scopedUsers.map((u) => u.user_id)
   );
   const emailByUserId = new Map((profiles ?? []).map((profile) => [profile.user_id, profile.email]));
 
@@ -133,35 +294,58 @@ export async function runMatchingEngine() {
     .from("offers_raw")
     .select("source, title, company, country, remote, day_rate, url, description, hash")
     .order("posted_at", { ascending: false, nullsFirst: false })
-    .limit(400);
+    .limit(500);
   if (offerError) throw new Error("matching_offers_failed");
 
-  let budget = MAX_SCORING_TOTAL;
+  let remainingGlobalCap = MAX_OFFERS_TOTAL;
   let createdMissions = 0;
   let queuedNotifications = 0;
+  let usersProcessed = 0;
 
-  for (const user of (users ?? []) as UserSettingsRow[]) {
-    if (budget <= 0) break;
+  for (const user of scopedUsers) {
+    if (remainingGlobalCap <= 0) {
+      console.warn("[matching] global_offer_cap_reached");
+      break;
+    }
 
     const stacks = [user.primary_stack, user.secondary_stack].filter(Boolean) as string[];
-    const filtered = (offerPool ?? [])
-      .filter((offer) => countryMatch(offer.country, user.countries ?? []))
-      .filter((offer) => remoteMatch(offer.remote, user.remote_preference))
-      .filter((offer) => textContainsAny(`${offer.title} ${offer.description ?? ""}`, stacks))
-      .slice(0, Math.min(MAX_OFFERS_PER_USER, budget));
+    const preFiltered = deterministicPreFilter(user, (offerPool ?? []) as OfferRow[]);
+    const candidates = preFiltered.slice(0, Math.min(MAX_OFFERS_PER_USER, remainingGlobalCap));
+    remainingGlobalCap -= candidates.length;
 
-    if (!filtered.length) continue;
+    if (!candidates.length) {
+      usersProcessed += 1;
+      continue;
+    }
+
+    const window = weekWindowParis();
+    const { data: currentWeekMissions } = await service
+      .from("missions")
+      .select("id, url")
+      .eq("user_id", user.user_id)
+      .gte("created_at", window.start)
+      .lt("created_at", window.end);
+
+    const sentThisWeek = currentWeekMissions?.length ?? 0;
+    if (sentThisWeek >= WEEKLY_MAX_MISSIONS) {
+      console.log(`[matching] skip_user_weekly_limit user_id=${user.user_id} sent_this_week=${sentThisWeek}`);
+      usersProcessed += 1;
+      continue;
+    }
+
+    const existingUrls = new Set((currentWeekMissions ?? []).map((mission) => mission.url));
 
     const { data: cacheRows } = await service
       .from("user_offer_scores")
-      .select("offer_hash, score, decision, reasons, subject, pitch")
+      .select("offer_hash, score, decision, reasons, missing, subject, pitch")
       .eq("user_id", user.user_id)
-      .in("offer_hash", filtered.map((offer) => offer.hash));
+      .in("offer_hash", candidates.map((offer) => offer.hash));
 
-    const cache = new Map((cacheRows ?? []).map((row: any) => [row.offer_hash, row]));
+    const cache = new Map((cacheRows ?? ([] as CachedScoreRow[])).map((row) => [row.offer_hash, row]));
+
     const scored: Array<{ offer: OfferRow; score: number; decision: "KEEP" | "DROP"; reasons: string; subject: string; pitch: string }> = [];
 
-    for (const offer of filtered as OfferRow[]) {
+    for (const offer of candidates) {
       const cached = cache.get(offer.hash);
       if (cached) {
         scored.push({
@@ -175,18 +359,32 @@ export async function runMatchingEngine() {
         continue;
       }
 
-      const scoredOffer = heuristicScore(offer, stacks);
-      const pitch = makePitch(offer, scoredOffer.reasons);
-      budget -= 1;
+      if (aiBudget.currentCalls >= aiBudget.maxCalls) {
+        console.warn("[matching] max_ai_calls_reached_stopping_run");
+        break;
+      }
 
+      const aiScore = await scoreWithOpenAI(offer, stacks, user, aiBudget);
+      if (aiBudget.currentCalls > aiBudget.maxCalls) {
+        console.warn("[matching] ai_budget_exceeded_hard_stop");
+        break;
+      }
+
+      // If AI fails (HTTP/parse), drop candidate safely for this user.
+      const finalScore = aiScore ?? fallbackScore(offer, stacks);
+      if (!aiScore && process.env.OPENAI_API_KEY) {
+        continue;
+      }
+
+      const pitch = makePitch(offer, finalScore.reasons);
       await service.from("user_offer_scores").upsert(
         {
           user_id: user.user_id,
           offer_hash: offer.hash,
-          score: scoredOffer.score,
-          decision: scoredOffer.decision,
-          reasons: scoredOffer.reasons.join(" | "),
-          missing: scoredOffer.missing.join(" | "),
+          score: finalScore.score,
+          decision: finalScore.decision,
+          reasons: finalScore.reasons.join(" | "),
+          missing: finalScore.missing.join(" | "),
           subject: pitch.subject,
           pitch: pitch.pitch,
         },
@@ -195,35 +393,30 @@ export async function runMatchingEngine() {
 
       scored.push({
         offer,
-        score: scoredOffer.score,
-        decision: scoredOffer.decision,
-        reasons: scoredOffer.reasons.join(" | "),
+        score: finalScore.score,
+        decision: finalScore.decision,
+        reasons: finalScore.reasons.join(" | "),
         subject: pitch.subject,
         pitch: pitch.pitch,
       });
-
-      if (budget <= 0) break;
     }
 
-    const window = weekWindow();
-    const { data: currentWeekMissions } = await service
-      .from("missions")
-      .select("url")
-      .eq("user_id", user.user_id)
-      .gte("created_at", window.start)
-      .lt("created_at", window.end);
-    const existingUrls = new Set((currentWeekMissions ?? []).map((mission) => mission.url));
+    if (aiBudget.currentCalls >= aiBudget.maxCalls) {
+      console.warn("[matching] hard_stop_due_to_ai_cap");
+      break;
+    }
+
+    const slotsLeft = Math.max(0, WEEKLY_MAX_MISSIONS - sentThisWeek);
+    if (slotsLeft === 0) {
+      usersProcessed += 1;
+      continue;
+    }
 
     const selected = scored
       .filter((row) => !existingUrls.has(row.offer.url))
-      .sort((a, b) => {
-        const aKeep = a.decision === "KEEP" ? 1 : 0;
-        const bKeep = b.decision === "KEEP" ? 1 : 0;
-        if (aKeep !== bKeep) return bKeep - aKeep;
-        return b.score - a.score;
-      })
-      .filter((row, index) => row.decision === "KEEP" || row.score >= 70 || index < 3)
-      .slice(0, 3);
+      .filter((row) => row.score >= 70)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, slotsLeft);
 
     for (const mission of selected) {
       const { data: insertedMission, error: missionError } = await service
@@ -254,14 +447,25 @@ export async function runMatchingEngine() {
         .eq("offer_hash", mission.offer.hash);
 
       const channels: Array<{ channel: "email" | "whatsapp" | "sms"; to: string | null }> = [
-        { channel: "email", to: emailByUserId.get(user.user_id) ?? null },
+        { channel: "email", to: user.notify_email ? (emailByUserId.get(user.user_id) ?? null) : null },
         { channel: "whatsapp", to: user.notify_whatsapp ? user.whatsapp_number : null },
         { channel: "sms", to: user.notify_sms ? user.sms_number : null },
       ];
 
-      const queueRows = channels
-        .filter((channel) => channel.to)
-        .map((channel) => ({
+      for (const channel of channels.filter((c) => c.to)) {
+        const { data: existingQueue } = await service
+          .from("notification_queue")
+          .select("id")
+          .eq("user_id", user.user_id)
+          .eq("mission_id", insertedMission.id)
+          .eq("channel", channel.channel)
+          .in("status", ["pending", "sent"])
+          .limit(1)
+          .maybeSingle();
+
+        if (existingQueue) continue;
+
+        const { error: queueError } = await service.from("notification_queue").insert({
           user_id: user.user_id,
           mission_id: insertedMission.id,
           channel: channel.channel,
@@ -276,20 +480,32 @@ export async function runMatchingEngine() {
             reasons: mission.reasons,
           },
           status: "pending",
-        }));
+        });
 
-      if (queueRows.length) {
-        const { error: queueError } = await service.from("notification_queue").insert(queueRows);
-        if (!queueError) queuedNotifications += queueRows.length;
+        if (!queueError) queuedNotifications += 1;
       }
     }
+
+    usersProcessed += 1;
   }
 
+  const durationMs = Date.now() - runStarted;
+  const avgAiCallsPerUser = usersProcessed > 0 ? Number((aiBudget.currentCalls / usersProcessed).toFixed(2)) : 0;
+
+  console.log(
+    `[matching] finished users_processed=${usersProcessed} missions=${createdMissions} notifications=${queuedNotifications} ai_calls=${aiBudget.currentCalls} estimated_tokens=${aiBudget.estimatedTokens} duration_ms=${durationMs} avg_ai_calls_per_user=${avgAiCallsPerUser}`
+  );
+
   return {
-    users: users?.length ?? 0,
+    users: scopedUsers.length,
+    usersProcessed,
     createdMissions,
     queuedNotifications,
-    remainingBudget: budget,
-    limits: { maxPerUser: MAX_OFFERS_PER_USER, maxTotal: MAX_SCORING_TOTAL },
+    aiCalls: aiBudget.currentCalls,
+    aiEstimatedTokens: aiBudget.estimatedTokens,
+    avgAiCallsPerUser,
+    limits: { maxPerUser: MAX_OFFERS_PER_USER, maxTotal: MAX_OFFERS_TOTAL, maxAiCallsPerRun: aiBudget.maxCalls },
+    simulation: simulateUsers > 0,
+    durationMs,
   };
 }
