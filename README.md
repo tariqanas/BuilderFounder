@@ -25,6 +25,7 @@ Use `.env.example` as source of truth.
 - `CRON_KEY`
 - `HEALTH_KEY`
 - `APP_URL`
+- `DEV_SEED_SECRET`
 
 ### Optional
 - `OPENAI_API_KEY`
@@ -33,6 +34,20 @@ Use `.env.example` as source of truth.
 - `SIMULATE_USERS`
 
 `lib/env.ts` validates env at startup and throws fast, explicit errors for missing/invalid variables.
+
+## Local dev quick test
+1. Enable radar in `/app/settings` (or via onboarding) for a user with active/trialing subscription.
+2. Seed offers:
+   ```bash
+   curl -X POST http://localhost:3000/api/dev/seed-offers \
+     -H "x-dev-secret: $DEV_SEED_SECRET"
+   ```
+3. Run matching:
+   ```bash
+   curl -X POST http://localhost:3000/api/dev/run-matching \
+     -H "x-dev-secret: $DEV_SEED_SECRET"
+   ```
+4. Reload `/app` dashboard to see mission signals and copy-ready pitches.
 
 ## Deployment (Vercel)
 - `vercel.json` configures Vercel Cron every 3 hours:

@@ -2,8 +2,6 @@ import Link from "next/link";
 import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
 import { MissionList } from "@/components/mission-list";
 
-const PAGE_SIZE = 20;
-
 function toReasons(value: string | null) {
   return String(value ?? "")
     .split("|")
@@ -14,12 +12,10 @@ function toReasons(value: string | null) {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: { page?: string; notice?: string };
+  searchParams?: { notice?: string };
 }) {
   const { user } = await requireUser();
   const supabase = await getUserClientOrRedirect();
-  const page = Math.max(1, Number(searchParams?.page ?? "1"));
-
   const { data: settings } = await supabase.from("user_settings").select("radar_active").eq("user_id", user.id).maybeSingle();
 
   const { data: subscription } = await supabase
@@ -35,18 +31,14 @@ export default async function DashboardPage({
     .eq("user_id", user.id)
     .gte("created_at", weekStart);
 
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE;
   const { data: missionsData } = await supabase
     .from("missions")
     .select("id,title,company,score,pitch,url,reasons")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .range(from, to);
+    .limit(20);
 
-  const missions = missionsData ?? [];
-
-  const safeMissions = missions.slice(0, PAGE_SIZE).map((m) => ({
+  const safeMissions = (missionsData ?? []).map((m) => ({
     id: m.id,
     title: m.title,
     company: m.company,
@@ -56,7 +48,6 @@ export default async function DashboardPage({
     reasons: toReasons(m.reasons),
   }));
 
-  const hasMore = missions.length > PAGE_SIZE;
 
   return (
     <main style={{ display: "grid", gap: 16 }}>
@@ -102,11 +93,6 @@ export default async function DashboardPage({
           </Link>
         </div>
         <MissionList missions={safeMissions} />
-        {hasMore && (
-          <Link href={`/app?page=${page + 1}`} className="btn" style={{ width: "fit-content" }}>
-            Load more
-          </Link>
-        )}
       </section>
     </main>
   );

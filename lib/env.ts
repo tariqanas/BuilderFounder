@@ -14,6 +14,7 @@ type EnvSchema = {
   CRON_KEY: string;
   HEALTH_KEY: string;
   APP_URL: string;
+  DEV_SEED_SECRET: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL: string;
   MAX_AI_CALLS_PER_RUN: string;
@@ -66,6 +67,7 @@ export const env = {
   CRON_KEY: readRequired("CRON_KEY"),
   HEALTH_KEY: readRequired("HEALTH_KEY"),
   APP_URL: readUrl("APP_URL"),
+  DEV_SEED_SECRET: readRequired("DEV_SEED_SECRET"),
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
   MAX_AI_CALLS_PER_RUN: readInteger("MAX_AI_CALLS_PER_RUN", 300),
