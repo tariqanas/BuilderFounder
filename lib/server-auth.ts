@@ -28,13 +28,14 @@ export async function getUserClientOrRedirect() {
 
 export async function requireActiveSubscription(userId: string) {
   const service = createSupabaseServiceClient();
-  const { data: subscription } = await service
+  const { data: subscription, error } = await service
     .from("subscriptions")
     .select("status")
     .eq("user_id", userId)
+    .in("status", ["active", "trialing"])
     .maybeSingle();
 
-  if (!subscription || !ACTIVE_SUBSCRIPTION.has(subscription.status)) {
+  if (error || !subscription || !ACTIVE_SUBSCRIPTION.has(subscription.status)) {
     redirect("/billing");
   }
 
