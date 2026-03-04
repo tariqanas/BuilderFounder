@@ -1,15 +1,38 @@
 import { redirect } from "next/navigation";
 import { getUserClientOrRedirect, isSubscriptionActive, requireUser } from "@/lib/server-auth";
 
+export const dynamic = "force-dynamic";
+
+const CHECKOUT_RETRY_ATTEMPTS = 3;
+const CHECKOUT_RETRY_DELAY_MS = 800;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default async function BillingPage({ searchParams }: { searchParams?: { checkout?: string } }) {
   const { user } = await requireUser();
   const supabase = await getUserClientOrRedirect();
 
-  const { data: subscription } = await supabase
+  let { data: subscription } = await supabase
     .from("subscriptions")
     .select("status,current_period_end,stripe_customer_id")
     .eq("user_id", user.id)
     .maybeSingle();
+
+  if (searchParams?.checkout === "success" && !isSubscriptionActive(subscription?.status)) {
+    for (let attempt = 0; attempt < CHECKOUT_RETRY_ATTEMPTS; attempt += 1) {
+      await sleep(CHECKOUT_RETRY_DELAY_MS);
+      const { data: refreshedSubscription } = await supabase
+        .from("subscriptions")
+        .select("status,current_period_end,stripe_customer_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      subscription = refreshedSubscription ?? subscription;
+      if (isSubscriptionActive(subscription?.status)) break;
+    }
+  }
 
   const { data: settings } = await supabase
     .from("user_settings")
