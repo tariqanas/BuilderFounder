@@ -88,6 +88,7 @@ It returns JSON summary counts (offers, users processed, missions, notifications
 4. Keep RLS enabled on all tables (including deny-all service-only tables).
 5. CV upload path is `cv/<userId>/cv.pdf`.
 6. Service role key is server-side only (never expose client-side).
+7. `public.user_settings` rows are created automatically on signup via a database trigger.
 
 ## Make production readiness
 Endpoints requiring API key:

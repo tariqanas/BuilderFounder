@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const { data: settings } = await service.from("user_settings").select("radar_active").eq("user_id", user.id).maybeSingle();
   const nextValue = !settings?.radar_active;
 
-  const { error } = await service.from("user_settings").upsert({ user_id: user.id, radar_active: nextValue }, { onConflict: "user_id" });
+  const { error } = await service.from("user_settings").update({ radar_active: nextValue }).eq("user_id", user.id);
   if (error) {
     return NextResponse.redirect(new URL("/app?notice=radar-update-failed", request.url), { status: 303 });
   }
