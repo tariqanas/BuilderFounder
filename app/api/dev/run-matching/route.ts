@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 type UserSettings = {
   user_id: string;
   primary_stack: string;
@@ -33,7 +35,8 @@ function isAuthorizedDevRequest(request: Request) {
   return Boolean(secret && secret === env.DEV_SEED_SECRET);
 }
 
-function includesKeyword(content: string, keyword: string) {
+function includesKeyword(content: string | null | undefined, keyword: string | null | undefined) {
+  if (content == null || keyword == null) return false;
   return content.toLowerCase().includes(keyword.toLowerCase());
 }
 
@@ -52,7 +55,7 @@ function countryMatches(allowedCountries: string[] | null, offerCountry: string 
   if (!allowedCountries || !allowedCountries.length) return false;
   if (!offerCountry) return false;
   const normalizedCountry = offerCountry.toLowerCase();
-  return allowedCountries.some((country) => normalizedCountry.includes(country.toLowerCase()));
+  return allowedCountries.some((country) => country != null && normalizedCountry.includes(country.toLowerCase()));
 }
 
 function buildReasons(reasons: string[]) {
@@ -132,7 +135,7 @@ export async function POST(request: Request) {
     const scored = offers.map((offer) => {
       let score = 0;
       const reasons: string[] = [];
-      const text = `${offer.title} ${offer.description ?? ""}`;
+      const text = `${offer.title ?? ""} ${offer.description ?? ""}`;
 
       if (includesKeyword(text, user.primary_stack)) {
         score += 40;
