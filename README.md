@@ -37,10 +37,10 @@ Use `.env.example` as source of truth.
 
 ## Local dev quick test
 1. Enable radar in `/app/settings` (or via onboarding) for a user with active/trialing subscription.
-2. Seed offers:
+2. Ingest real offers:
    ```bash
-   curl -X POST http://localhost:3000/api/dev/seed-offers \
-     -H "x-dev-secret: $DEV_SEED_SECRET"
+   curl -X POST http://localhost:3000/api/cron/ingest-offers \
+     -H "x-cron-key: $CRON_KEY"
    ```
 3. Run matching:
    ```bash
@@ -53,6 +53,11 @@ Use `.env.example` as source of truth.
 - `vercel.json` configures Vercel Cron every 3 hours:
   - `GET /api/cron/run`
 - The cron endpoint requires `x-cron-key: <CRON_KEY>`.
+
+Optional standalone ingestion trigger:
+- `GET /api/cron/ingest-offers`
+- same `x-cron-key` authentication.
+- useful if you want to split schedules (ingest first, then run matching in a separate job).
 
 ### Cron pipeline
 `/api/cron/run` executes:
