@@ -1,6 +1,7 @@
 import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { buildMissionEmail } from "@/lib/notification-template";
+import { buildFallbackPitch, cleanMissionText, toMissionReasons } from "@/lib/mission-utils";
 
 type UserSettingsRow = {
   user_id: string;
@@ -252,10 +253,19 @@ async function scoreWithOpenAI(
   return null;
 }
 
-function makePitch(offer: OfferRow, reasons: string[]) {
+function makePitch(offer: OfferRow, reasons: string[], user: UserSettingsRow) {
+  const cleanTitle = cleanMissionText(offer.title, "mission");
+  const cleanCompany = cleanMissionText(offer.company, "company");
+  const reasonList = reasons.length ? reasons : toMissionReasons(offer.description);
   return {
-    subject: `${offer.title} — profil DevOps/Cloud compatible`,
-    pitch: `Bonjour, mission ${offer.title} alignée. Raisons: ${reasons.slice(0, 2).join("; ")}. Je peux contribuer rapidement sur le delivery et la fiabilité plateforme.`,
+    subject: `${cleanTitle} — profile fit`,
+    pitch: buildFallbackPitch({
+      title: cleanTitle,
+      company: cleanCompany,
+      reasons: reasonList,
+      primaryStack: user.primary_stack,
+      secondaryStack: user.secondary_stack,
+    }),
   };
 }
 
@@ -387,7 +397,7 @@ export async function runMatchingEngine() {
         continue;
       }
 
-      const pitch = makePitch(offer, finalScore.reasons);
+      const pitch = makePitch(offer, finalScore.reasons, user);
       await service.from("user_offer_scores").upsert(
         {
           user_id: user.user_id,
