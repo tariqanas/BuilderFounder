@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
+import { buildFallbackPitch, cleanMissionText } from "@/lib/mission-utils";
 
 export const dynamic = "force-dynamic";
 
 type UserSettings = {
   user_id: string;
   primary_stack: string;
+  secondary_stack: string | null;
   min_day_rate: number | null;
   remote_preference: string | null;
   countries: string[] | null;
@@ -88,7 +90,7 @@ export async function POST(request: Request) {
   const { data: usersData, error: usersError } = await service
     .from("user_settings")
     .select(
-      "user_id, primary_stack, min_day_rate, remote_preference, countries, notify_email, notify_whatsapp, whatsapp_number, notify_sms, sms_number"
+      "user_id, primary_stack, secondary_stack, min_day_rate, remote_preference, countries, notify_email, notify_whatsapp, whatsapp_number, notify_sms, sms_number"
     )
     .eq("radar_active", true)
     .in("user_id", eligibleUserIds);
@@ -174,7 +176,13 @@ export async function POST(request: Request) {
     for (const item of selected) {
       if (existingUrls.has(item.offer.url)) continue;
 
-      const pitch = `Hi, I'm a senior ${user.primary_stack} freelancer. I'm interested in ${item.offer.title}. I've delivered similar work with ${user.primary_stack}. Happy to share details.`;
+      const pitch = buildFallbackPitch({
+        title: cleanMissionText(item.offer.title, "mission"),
+        company: cleanMissionText(item.offer.company, "company"),
+        reasons: item.reasons.split("|").map((r) => r.trim()).filter(Boolean),
+        primaryStack: user.primary_stack,
+        secondaryStack: user.secondary_stack,
+      });
       const createdAt = new Date().toISOString();
 
       const { data: insertedMission, error: missionError } = await service

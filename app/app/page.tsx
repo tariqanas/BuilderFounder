@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
 import { MissionList } from "@/components/mission-list";
-
-function toReasons(value: string | null) {
-  return String(value ?? "")
-    .split("|")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
+import {
+  buildFallbackPitch,
+  cleanMissionText,
+  isMissionUrlUsable,
+  isPitchUsable,
+  toMissionReasons,
+} from "@/lib/mission-utils";
 
 export default async function DashboardPage({
   searchParams,
@@ -16,7 +16,11 @@ export default async function DashboardPage({
 }) {
   const { user } = await requireUser();
   const supabase = await getUserClientOrRedirect();
-  const { data: settings } = await supabase.from("user_settings").select("radar_active").eq("user_id", user.id).maybeSingle();
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("radar_active,primary_stack,secondary_stack")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   const { data: subscription } = await supabase
     .from("subscriptions")
@@ -40,12 +44,21 @@ export default async function DashboardPage({
 
   const safeMissions = (missionsData ?? []).map((m) => ({
     id: m.id,
-    title: m.title,
-    company: m.company,
+    title: cleanMissionText(m.title, "Untitled mission"),
+    company: cleanMissionText(m.company, "Unknown company"),
     score: Number(m.score ?? 0),
-    pitch: m.pitch ?? "",
-    url: m.url,
-    reasons: toReasons(m.reasons),
+    pitch: isPitchUsable(m.pitch)
+      ? m.pitch
+      : buildFallbackPitch({
+          title: m.title,
+          company: m.company,
+          reasons: toMissionReasons(m.reasons),
+          primaryStack: settings?.primary_stack,
+          secondaryStack: settings?.secondary_stack,
+        }),
+    url: cleanMissionText(m.url, ""),
+    hasValidUrl: isMissionUrlUsable(m.url),
+    reasons: toMissionReasons(m.reasons),
   }));
 
 
