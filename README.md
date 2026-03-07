@@ -32,6 +32,7 @@ Use `.env.example` as source of truth.
 - `OPENAI_MODEL`
 - `MAX_AI_CALLS_PER_RUN`
 - `SIMULATE_USERS`
+- `MATCH_SCORE_THRESHOLD`
 
 `lib/env.ts` validates env at startup and throws fast, explicit errors for missing/invalid variables.
 

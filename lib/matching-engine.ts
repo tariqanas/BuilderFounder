@@ -62,6 +62,7 @@ type AIBudget = {
 const MAX_OFFERS_PER_USER = 20;
 const MAX_OFFERS_TOTAL = 300;
 const WEEKLY_MAX_MISSIONS = 3;
+const DEFAULT_MATCH_SCORE_THRESHOLD = 70;
 
 const DEFAULT_MAX_AI_CALLS_PER_RUN = 300;
 
@@ -76,14 +77,18 @@ Rules:
 - missing lists missing skills/information/blockers
 No markdown.`;
 
-export const PITCH_PROMPT = `You are writing a concise outreach draft for a DevOps/Cloud freelancer.
+export const PITCH_PROMPT = `You are writing a first outreach message for a freelance IT consultant.
 Return strict JSON only: {"subject":string,"pitch":string}
 Rules:
 - subject <= 90 chars
-- pitch <= 420 chars
-- write as a direct first outreach message/email intro
-- technical, concrete, no generic AI wording or fluff
-- no "passionate", "dynamic", or placeholder language.`;
+- pitch <= 420 chars and 2-4 sentences max
+- pitch must be directly usable as first contact to recruiter/client
+- adapt to offer title + main technologies + user profile/CV when available
+- structure: (1) quick reference to role/project, (2) relevant technical experience, (3) short value statement, (4) friendly closing
+- tone: human, natural, concise, technical, specific
+- avoid fluff and generic AI wording
+- forbidden phrases include: "I am passionate", "I would love the opportunity", "dynamic professional"
+- no markdown, no placeholders.`;
 
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, " ").trim();
@@ -524,9 +529,14 @@ export async function runMatchingEngine() {
       continue;
     }
 
+    const matchScoreThreshold =
+      Number.isFinite(env.MATCH_SCORE_THRESHOLD) && env.MATCH_SCORE_THRESHOLD >= 0
+        ? Math.min(100, env.MATCH_SCORE_THRESHOLD)
+        : DEFAULT_MATCH_SCORE_THRESHOLD;
+
     const selected = scored
       .filter((row) => !existingUrls.has(row.offer.url))
-      .filter((row) => row.score >= 70)
+      .filter((row) => row.score >= matchScoreThreshold || row.decision === "KEEP")
       .sort((a, b) => b.score - a.score)
       .slice(0, slotsLeft);
 

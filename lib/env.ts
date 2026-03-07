@@ -19,6 +19,7 @@ type EnvSchema = {
   OPENAI_MODEL: string;
   MAX_AI_CALLS_PER_RUN: string;
   SIMULATE_USERS: string;
+  MATCH_SCORE_THRESHOLD: string;
 };
 
 function readRequired(name: keyof EnvSchema) {
@@ -72,4 +73,5 @@ export const env = {
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
   MAX_AI_CALLS_PER_RUN: readInteger("MAX_AI_CALLS_PER_RUN", 300),
   SIMULATE_USERS: readInteger("SIMULATE_USERS", 0),
+  MATCH_SCORE_THRESHOLD: readInteger("MATCH_SCORE_THRESHOLD", 70),
 } as const;
