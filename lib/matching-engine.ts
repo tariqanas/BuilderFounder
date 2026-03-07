@@ -29,6 +29,12 @@ type OfferRow = {
   hash: string;
 };
 
+type CvFileRow = {
+  user_id: string;
+  extracted_text: string | null;
+  created_at: string;
+};
+
 type ScoreResult = {
   score: number;
   decision: "KEEP" | "DROP";
@@ -63,17 +69,21 @@ export const SCORING_PROMPT = `You are a technical staffing scorer.
 Return strict JSON only: {"score":number,"decision":"KEEP"|"DROP","reasons":string[],"missing":string[]}
 Rules:
 - score 0..100 integer
-- KEEP only if constraints match and relevance is high
+- base score on concrete technical fit between profile/CV and offer scope
+- no fake precision: if data is weak, use broader scores (35, 50, 65)
+- KEEP only when there is clear technical fit and no hard blockers
 - reasons max 4 short technical points
-- missing lists blockers
+- missing lists missing skills/information/blockers
 No markdown.`;
 
 export const PITCH_PROMPT = `You are writing a concise outreach draft for a DevOps/Cloud freelancer.
 Return strict JSON only: {"subject":string,"pitch":string}
 Rules:
 - subject <= 90 chars
-- pitch <= 500 chars
-- technical, concrete, no generic AI wording.`;
+- pitch <= 420 chars
+- write as a direct first outreach message/email intro
+- technical, concrete, no generic AI wording or fluff
+- no "passionate", "dynamic", or placeholder language.`;
 
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, " ").trim();
@@ -142,21 +152,11 @@ function weekWindowParis() {
   };
 }
 
-function fallbackScore(offer: OfferRow, stacks: string[]): ScoreResult {
-  const corpus = `${offer.title} ${cleanDescription(offer.description)}`.toLowerCase();
-  const matches = stacks.filter((stack) => corpus.includes(stack.toLowerCase()));
-  const score = Math.min(55 + matches.length * 15 + ((offer.remote ?? "").toLowerCase().includes("remote") ? 5 : 0), 95);
-  return {
-    score,
-    decision: score >= 70 ? "KEEP" : "DROP",
-    reasons: matches.length ? [`Stack overlap: ${matches.join(", ")}`] : ["Weak stack overlap"],
-    missing: matches.length ? [] : ["Missing matching stack keywords"],
-  };
-}
-
 function parseScoreJson(raw: string): ScoreResult | null {
   try {
-    const parsed = JSON.parse(raw) as Partial<ScoreResult>;
+    const parsed = JSON.parse(raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "")) as Partial<
+      ScoreResult
+    >;
     if (typeof parsed.score !== "number") return null;
     if (parsed.decision !== "KEEP" && parsed.decision !== "DROP") return null;
     if (!Array.isArray(parsed.reasons) || !Array.isArray(parsed.missing)) return null;
@@ -172,10 +172,27 @@ function parseScoreJson(raw: string): ScoreResult | null {
   }
 }
 
+function parsePitchJson(raw: string): { subject: string; pitch: string } | null {
+  try {
+    const parsed = JSON.parse(raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "")) as {
+      subject?: unknown;
+      pitch?: unknown;
+    };
+    if (typeof parsed.subject !== "string" || typeof parsed.pitch !== "string") return null;
+    const subject = normalizeWhitespace(parsed.subject).slice(0, 90);
+    const pitch = normalizeWhitespace(parsed.pitch).slice(0, 420);
+    if (!subject || !pitch) return null;
+    return { subject, pitch };
+  } catch {
+    return null;
+  }
+}
+
 async function scoreWithOpenAI(
   offer: OfferRow,
   stacks: string[],
   user: UserSettingsRow,
+  cvText: string | null,
   budget: AIBudget
 ): Promise<ScoreResult | null> {
   const apiKey = env.OPENAI_API_KEY;
@@ -190,6 +207,9 @@ async function scoreWithOpenAI(
       min_day_rate: user.min_day_rate,
       remote_preference: user.remote_preference,
       countries: user.countries ?? [],
+    },
+    profile_context: {
+      extracted_cv_text: cvText,
     },
     stacks,
     offer: {
@@ -253,12 +273,66 @@ async function scoreWithOpenAI(
   return null;
 }
 
-function makePitch(offer: OfferRow, reasons: string[], user: UserSettingsRow) {
+async function makePitchWithOpenAI(
+  offer: OfferRow,
+  score: ScoreResult,
+  user: UserSettingsRow,
+  cvText: string | null,
+  budget: AIBudget
+) {
+  const apiKey = env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  if (budget.currentCalls >= budget.maxCalls) return null;
+
+  const promptBody = {
+    user_profile: {
+      primary_stack: user.primary_stack,
+      secondary_stack: user.secondary_stack,
+      extracted_cv_text: cvText,
+    },
+    offer: {
+      title: offer.title,
+      company: offer.company,
+      country: offer.country,
+      remote: offer.remote,
+      day_rate: offer.day_rate,
+      description: cleanDescription(offer.description),
+    },
+    score,
+  };
+
+  const bodyString = JSON.stringify(promptBody);
+  budget.currentCalls += 1;
+  budget.estimatedTokens += estimateTokens(bodyString) + estimateTokens(PITCH_PROMPT);
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: env.OPENAI_MODEL,
+      input: [
+        { role: "system", content: PITCH_PROMPT },
+        { role: "user", content: bodyString },
+      ],
+      max_output_tokens: 220,
+    }),
+  });
+
+  if (!response.ok) return null;
+  const payload = (await response.json()) as { output_text?: string };
+  if (!payload.output_text) return null;
+  return parsePitchJson(payload.output_text);
+}
+
+function makePitchFallback(offer: OfferRow, reasons: string[], user: UserSettingsRow) {
   const cleanTitle = cleanMissionText(offer.title, "mission");
   const cleanCompany = cleanMissionText(offer.company, "company");
   const reasonList = reasons.length ? reasons : toMissionReasons(offer.description);
   return {
-    subject: `${cleanTitle} — profile fit`,
+    subject: `${cleanTitle} — technical fit`,
     pitch: buildFallbackPitch({
       title: cleanTitle,
       company: cleanCompany,
@@ -310,6 +384,22 @@ export async function runMatchingEngine() {
     scopedUsers.map((u) => u.user_id)
   );
   const emailByUserId = new Map((profiles ?? []).map((profile) => [profile.user_id, profile.email]));
+
+  const { data: cvRows } = await service
+    .from("cv_files")
+    .select("user_id, extracted_text, created_at")
+    .in(
+      "user_id",
+      scopedUsers.map((u) => u.user_id)
+    )
+    .order("created_at", { ascending: false });
+
+  const cvByUserId = new Map<string, string>();
+  for (const row of (cvRows ?? []) as CvFileRow[]) {
+    if (cvByUserId.has(row.user_id)) continue;
+    const text = normalizeWhitespace(String(row.extracted_text ?? "")).slice(0, 1800);
+    if (text) cvByUserId.set(row.user_id, text);
+  }
 
   const { data: offerPool, error: offerError } = await service
     .from("offers_raw")
@@ -365,6 +455,7 @@ export async function runMatchingEngine() {
     const cache = new Map((cacheRows ?? ([] as CachedScoreRow[])).map((row) => [row.offer_hash, row]));
 
     const scored: Array<{ offer: OfferRow; score: number; decision: "KEEP" | "DROP"; reasons: string; subject: string; pitch: string }> = [];
+    const cvText = cvByUserId.get(user.user_id) ?? null;
 
     for (const offer of candidates) {
       const cached = cache.get(offer.hash);
@@ -385,19 +476,19 @@ export async function runMatchingEngine() {
         break;
       }
 
-      const aiScore = await scoreWithOpenAI(offer, stacks, user, aiBudget);
+      const aiScore = await scoreWithOpenAI(offer, stacks, user, cvText, aiBudget);
       if (aiBudget.currentCalls > aiBudget.maxCalls) {
         console.warn("[matching] ai_budget_exceeded_hard_stop");
         break;
       }
 
       // If AI fails (HTTP/parse), drop candidate safely for this user.
-      const finalScore = aiScore ?? fallbackScore(offer, stacks);
-      if (!aiScore && env.OPENAI_API_KEY) {
-        continue;
-      }
+      if (!aiScore) continue;
 
-      const pitch = makePitch(offer, finalScore.reasons, user);
+      const finalScore = aiScore;
+
+      const aiPitch = await makePitchWithOpenAI(offer, finalScore, user, cvText, aiBudget);
+      const pitch = aiPitch ?? makePitchFallback(offer, finalScore.reasons, user);
       await service.from("user_offer_scores").upsert(
         {
           user_id: user.user_id,
@@ -452,6 +543,7 @@ export async function runMatchingEngine() {
           day_rate: mission.offer.day_rate,
           url: mission.offer.url,
           score: mission.score,
+          decision: mission.decision,
           reasons: mission.reasons,
           pitch: mission.pitch,
         })

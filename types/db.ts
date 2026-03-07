@@ -19,6 +19,7 @@ export type Mission = {
   day_rate: number | null;
   url: string;
   score: number;
+  decision: "KEEP" | "DROP" | null;
   reasons: string;
   pitch: string;
   created_at: string;
