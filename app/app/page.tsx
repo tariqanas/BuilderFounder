@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
 import { MissionList } from "@/components/mission-list";
+import { resolveMatchScoreThreshold } from "@/lib/matching-config";
 import {
   buildFallbackPitch,
   cleanMissionText,
@@ -35,10 +36,13 @@ export default async function DashboardPage({
     .eq("user_id", user.id)
     .gte("created_at", weekStart);
 
+  const matchScoreThreshold = resolveMatchScoreThreshold(undefined);
+
   const { data: missionsData } = await supabase
     .from("missions")
     .select("id,title,company,score,pitch,url,reasons")
     .eq("user_id", user.id)
+    .gte("score", matchScoreThreshold)
     .order("created_at", { ascending: false })
     .limit(20);
 

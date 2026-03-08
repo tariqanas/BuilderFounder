@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { buildMissionEmail } from "@/lib/notification-template";
 import { buildFallbackPitch, cleanMissionText, toMissionReasons } from "@/lib/mission-utils";
+import { resolveMatchScoreThreshold } from "@/lib/matching-config";
 
 type UserSettingsRow = {
   user_id: string;
@@ -62,8 +63,6 @@ type AIBudget = {
 const MAX_OFFERS_PER_USER = 20;
 const MAX_OFFERS_TOTAL = 300;
 const WEEKLY_MAX_MISSIONS = 3;
-const DEFAULT_MATCH_SCORE_THRESHOLD = 70;
-
 const DEFAULT_MAX_AI_CALLS_PER_RUN = 300;
 
 export const SCORING_PROMPT = `You are a technical staffing scorer.
@@ -529,10 +528,7 @@ export async function runMatchingEngine() {
       continue;
     }
 
-    const matchScoreThreshold =
-      Number.isFinite(env.MATCH_SCORE_THRESHOLD) && env.MATCH_SCORE_THRESHOLD >= 0
-        ? Math.min(100, env.MATCH_SCORE_THRESHOLD)
-        : DEFAULT_MATCH_SCORE_THRESHOLD;
+    const matchScoreThreshold = resolveMatchScoreThreshold(env.MATCH_SCORE_THRESHOLD);
 
     const selected = scored
       .filter((row) => !existingUrls.has(row.offer.url))
