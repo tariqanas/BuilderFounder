@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { getAppUrl } from "@/lib/app-url";
 
 type StripeSubscription = {
   id: string;
@@ -46,11 +47,13 @@ export async function createCustomer(email: string, userId: string) {
 }
 
 export async function createCheckoutSession(customerId: string, userId: string) {
+  const appUrl = getAppUrl();
+
   return stripeRequest<{ url: string }>("checkout/sessions", {
     mode: "subscription",
     customer: customerId,
-    success_url: `${env.APP_URL}/billing?checkout=success`,
-    cancel_url: `${env.APP_URL}/billing`,
+    success_url: `${appUrl}/billing?checkout=success`,
+    cancel_url: `${appUrl}/billing`,
     "line_items[0][price]": env.STRIPE_PRICE_ID,
     "line_items[0][quantity]": "1",
     "allow_promotion_codes": "true",
@@ -60,9 +63,11 @@ export async function createCheckoutSession(customerId: string, userId: string) 
 }
 
 export async function createPortalSession(customerId: string) {
+  const appUrl = getAppUrl();
+
   return stripeRequest<{ url: string }>("billing_portal/sessions", {
     customer: customerId,
-    return_url: `${env.APP_URL}/billing`,
+    return_url: `${appUrl}/billing`,
   });
 }
 
