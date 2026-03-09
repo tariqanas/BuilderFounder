@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import { env, publicEnv } from "@/lib/env";
 
 const noStoreFetch: typeof fetch = (input, init = {}) => {
   return fetch(input, {
@@ -9,21 +8,39 @@ const noStoreFetch: typeof fetch = (input, init = {}) => {
   });
 };
 
-const supabaseUrl = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
+function readRequiredEnv(name: string) {
+  const value = process.env[name];
+  if (!value || !value.trim()) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
+}
+
+function getPublicSupabaseUrl() {
+  return readRequiredEnv("NEXT_PUBLIC_SUPABASE_URL");
+}
+
+function getPublicAnonKey() {
+  return readRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+}
+
+function getServiceRoleKey() {
+  return readRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
+}
 
 export function createSupabaseBrowserClient() {
-  return createClient(supabaseUrl, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return createClient(getPublicSupabaseUrl(), getPublicAnonKey());
 }
 
 export function createSupabaseServiceClient() {
-  return createClient(supabaseUrl, env.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient(getPublicSupabaseUrl(), getServiceRoleKey(), {
     global: { fetch: noStoreFetch },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
 export function createSupabaseUserServerClient(accessToken: string) {
-  return createClient(supabaseUrl, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  return createClient(getPublicSupabaseUrl(), getPublicAnonKey(), {
     global: {
       fetch: noStoreFetch,
       headers: {
