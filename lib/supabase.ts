@@ -1,14 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/env";
+import { env, publicEnv } from "@/lib/env";
 
 const noStoreFetch: typeof fetch = (input, init = {}) => {
-  return fetch(input, { ...init, cache: "no-store", next: { revalidate: 0, ...(init as RequestInit & { next?: { revalidate?: number } }).next } });
+  return fetch(input, {
+    ...init,
+    cache: "no-store",
+    next: { revalidate: 0, ...(init as RequestInit & { next?: { revalidate?: number } }).next },
+  });
 };
 
-const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl = publicEnv.NEXT_PUBLIC_SUPABASE_URL;
 
 export function createSupabaseBrowserClient() {
-  return createClient(supabaseUrl, env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return createClient(supabaseUrl, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
 export function createSupabaseServiceClient() {
@@ -19,7 +23,7 @@ export function createSupabaseServiceClient() {
 }
 
 export function createSupabaseUserServerClient(accessToken: string) {
-  return createClient(supabaseUrl, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  return createClient(supabaseUrl, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     global: {
       fetch: noStoreFetch,
       headers: {
