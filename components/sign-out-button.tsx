@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -12,8 +11,6 @@ export function SignOutButton() {
     if (loading) return;
     setLoading(true);
 
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
     await fetch("/api/auth/logout", { method: "POST" });
 
     router.push("/login");
