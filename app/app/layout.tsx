@@ -6,5 +6,5 @@ export default async function ProtectedAppLayout({ children }: { children: React
   const { user } = await requireUser();
   await requireActiveSubscription(user.id);
 
-  return <AppShell>{children}</AppShell>;
+  return <AppShell authenticated={!!user}>{children}</AppShell>;
 }
