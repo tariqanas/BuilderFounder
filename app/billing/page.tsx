@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUserClientOrRedirect, isSubscriptionActive, requireUser } from "@/lib/server-auth";
+import { AppShell } from "@/components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +52,9 @@ export default async function BillingPage({ searchParams }: { searchParams?: { c
   }
 
   return (
-    <main className="container" style={{ maxWidth: 760 }}>
-      <div className="card" style={{ display: "grid", gap: 14, padding: "1.4rem" }}>
+    <AppShell authenticated={Boolean(user)}>
+      <main style={{ maxWidth: 760 }}>
+        <div className="card" style={{ display: "grid", gap: 14, padding: "1.4rem" }}>
         <h1 style={{ marginBottom: 0 }}>Billing</h1>
         <p style={{ marginTop: 0 }}>
           Status{" "}
@@ -89,11 +91,12 @@ export default async function BillingPage({ searchParams }: { searchParams?: { c
           </section>
         )}
 
-        <div className="muted" style={{ display: "grid", gap: 4, fontSize: "0.92rem" }}>
-          <span>• Stripe secured payments</span>
-          <span>• Cancel anytime</span>
+          <div className="muted" style={{ display: "grid", gap: 4, fontSize: "0.92rem" }}>
+            <span>• Stripe secured payments</span>
+            <span>• Cancel anytime</span>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </AppShell>
   );
 }
