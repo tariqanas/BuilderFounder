@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { env } from "@/lib/env";
+import { getAppUrl } from "@/lib/app-url";
 import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
 import { createPortalSession } from "@/lib/stripe";
 
@@ -14,7 +14,7 @@ export async function GET() {
     .maybeSingle();
 
   if (!subscription?.stripe_customer_id) {
-    return NextResponse.redirect(new URL("/billing", env.APP_URL));
+    return NextResponse.redirect(new URL("/billing", getAppUrl()));
   }
 
   const session = await createPortalSession(subscription.stripe_customer_id);
