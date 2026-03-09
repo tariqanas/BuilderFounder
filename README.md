@@ -50,6 +50,15 @@ Use `.env.example` as source of truth.
    ```
 4. Reload `/app` dashboard to see mission signals and copy-ready pitches.
 
+
+### Important: NEXT_PUBLIC variables in production
+`NEXT_PUBLIC_*` values are embedded at **build time** in Next.js client bundles.
+If `NEXT_PUBLIC_SUPABASE_URL` is missing in your hosting provider env at build time, the browser bundle will throw:
+`Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL`.
+
+If this suddenly appears "without code changes", verify that your deploy target still has
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` set for the active environment, then rebuild/redeploy.
+
 ## Deployment (Vercel)
 - `vercel.json` configures Vercel Cron every 3 hours:
   - `GET /api/cron/run`
