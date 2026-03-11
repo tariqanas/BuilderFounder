@@ -21,12 +21,16 @@ type StripeCheckoutSession = {
   status?: string;
   payment_status?: string;
   mode?: string;
-  customer?: string;
+  customer?: string | { id?: string } | null;
   metadata?: { user_id?: string };
-  subscription?: {
-    id: string;
-    status?: string;
-  } | null;
+  subscription?:
+    | string
+    | {
+        id: string;
+        status?: string;
+        metadata?: { user_id?: string };
+      }
+    | null;
 };
 
 function formEncode(input: Record<string, string>) {
