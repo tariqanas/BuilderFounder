@@ -16,6 +16,19 @@ type StripeEvent = {
   data: unknown;
 };
 
+type StripeCheckoutSession = {
+  id: string;
+  status?: string;
+  payment_status?: string;
+  mode?: string;
+  customer?: string;
+  metadata?: { user_id?: string };
+  subscription?: {
+    id: string;
+    status?: string;
+  } | null;
+};
+
 function formEncode(input: Record<string, string>) {
   return new URLSearchParams(input).toString();
 }
@@ -28,6 +41,24 @@ async function stripeRequest<T>(path: string, body: Record<string, string>) {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: formEncode(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Stripe error ${response.status}: ${text}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function stripeGetRequest<T>(path: string, searchParams?: URLSearchParams) {
+  const query = searchParams?.toString();
+  const url = `https://api.stripe.com/v1/${path}${query ? `?${query}` : ""}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+    },
   });
 
   if (!response.ok) {
@@ -52,14 +83,20 @@ export async function createCheckoutSession(customerId: string, userId: string) 
   return stripeRequest<{ url: string }>("checkout/sessions", {
     mode: "subscription",
     customer: customerId,
-    success_url: `${appUrl}/billing?checkout=success`,
-    cancel_url: `${appUrl}/billing`,
+    success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appUrl}/billing/cancel`,
     "line_items[0][price]": env.STRIPE_PRICE_ID,
     "line_items[0][quantity]": "1",
     "allow_promotion_codes": "true",
     "metadata[user_id]": userId,
     "subscription_data[metadata][user_id]": userId,
   });
+}
+
+export async function retrieveCheckoutSession(sessionId: string) {
+  const searchParams = new URLSearchParams();
+  searchParams.append("expand[]", "subscription");
+  return stripeGetRequest<StripeCheckoutSession>(`checkout/sessions/${sessionId}`, searchParams);
 }
 
 export async function createPortalSession(customerId: string) {
