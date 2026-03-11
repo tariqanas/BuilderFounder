@@ -21,6 +21,18 @@ export async function requireUser() {
   return { user: data.user, token };
 }
 
+export async function getUserIfAuthenticated() {
+  const token = getAccessToken();
+  if (!token) return null;
+
+  const service = createSupabaseServiceClient();
+  const { data, error } = await service.auth.getUser(token);
+
+  if (error || !data.user) return null;
+
+  return { user: data.user, token };
+}
+
 export async function getUserClientOrRedirect() {
   const { token } = await requireUser();
   return createSupabaseUserServerClient(token);

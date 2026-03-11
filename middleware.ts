@@ -2,8 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const AUTH_COOKIE = "it_sniper_access_token";
+const PUBLIC_BILLING_ROUTES = new Set(["/billing/success", "/billing/cancel"]);
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (PUBLIC_BILLING_ROUTES.has(pathname)) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   if (!token) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -31,5 +38,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*"],
+  matcher: ["/app/:path*", "/billing/:path*"],
 };
