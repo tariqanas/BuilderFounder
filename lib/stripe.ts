@@ -5,7 +5,7 @@ type StripeSubscription = {
   id: string;
   customer: string;
   status: string;
-  current_period_end: number;
+  current_period_end?: number | null;
   metadata?: { user_id?: string };
   customer_email?: string | null;
 };
@@ -28,6 +28,7 @@ type StripeCheckoutSession = {
     | {
         id: string;
         status?: string;
+        current_period_end?: number | null;
         metadata?: { user_id?: string };
       }
     | null;
@@ -101,6 +102,10 @@ export async function retrieveCheckoutSession(sessionId: string) {
   const searchParams = new URLSearchParams();
   searchParams.append("expand[]", "subscription");
   return stripeGetRequest<StripeCheckoutSession>(`checkout/sessions/${sessionId}`, searchParams);
+}
+
+export async function retrieveSubscription(subscriptionId: string) {
+  return stripeGetRequest<StripeSubscription>(`subscriptions/${subscriptionId}`);
 }
 
 export async function createPortalSession(customerId: string) {

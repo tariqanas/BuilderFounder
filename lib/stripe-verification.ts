@@ -1,7 +1,7 @@
 import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { isSubscriptionActive } from "@/lib/server-auth";
-import { retrieveCheckoutSession } from "@/lib/stripe";
+import { retrieveCheckoutSession, retrieveSubscription } from "@/lib/stripe";
 
 type CheckoutVerificationResult = {
   ok: boolean;
@@ -29,7 +29,11 @@ export async function verifyCheckoutSessionForUser(sessionId: string, userId: st
       typeof session.subscription === "string"
         ? session.subscription
         : subscriptionObject?.id;
-    const subscriptionStatus = subscriptionObject?.status ?? "";
+    const expandedSubscriptionStatus = subscriptionObject?.status ?? "";
+    const expandedSubscriptionCurrentPeriodEnd =
+      typeof subscriptionObject?.current_period_end === "number"
+        ? subscriptionObject.current_period_end
+        : null;
     const subscriptionMetadataUserId = subscriptionObject?.metadata?.user_id;
     const metadataUserId = sessionMetadataUserId ?? subscriptionMetadataUserId;
 
@@ -58,8 +62,23 @@ export async function verifyCheckoutSessionForUser(sessionId: string, userId: st
       return { ok: false, message: "Checkout completed but no subscription was attached to this session." };
     }
 
+    let subscriptionStatus = expandedSubscriptionStatus;
+    let currentPeriodEndUnix = expandedSubscriptionCurrentPeriodEnd;
+
+    if (!subscriptionStatus || currentPeriodEndUnix === null) {
+      logVerification("info", "retrieving full subscription for verification", {
+        sessionId,
+        userId,
+        subscriptionId,
+      });
+
+      const fullSubscription = await retrieveSubscription(subscriptionId);
+      subscriptionStatus = fullSubscription.status;
+      currentPeriodEndUnix = typeof fullSubscription.current_period_end === "number" ? fullSubscription.current_period_end : null;
+    }
+
     if (!subscriptionStatus) {
-      logVerification("warn", "subscription was not expanded on checkout session", {
+      logVerification("warn", "subscription status missing during verification", {
         sessionId,
         userId,
         subscriptionId,
@@ -87,6 +106,7 @@ export async function verifyCheckoutSessionForUser(sessionId: string, userId: st
         stripe_customer_id: stripeCustomerId,
         stripe_subscription_id: subscriptionId,
         status: subscriptionStatus,
+        current_period_end: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000).toISOString() : null,
       },
       { onConflict: "user_id" }
     );
