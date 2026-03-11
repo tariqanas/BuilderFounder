@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUserIfAuthenticated } from "@/lib/server-auth";
+import { createSupabaseUserServerClient } from "@/lib/supabase";
+import { getOnboardingState } from "@/lib/onboarding-state";
 import { verifyCheckoutSessionForUser } from "@/lib/stripe-verification";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +73,9 @@ export default async function BillingSuccessPage({
   }
 
   if (result.ok) {
-    redirect("/app");
+    const supabase = createSupabaseUserServerClient(auth.token);
+    const onboarding = await getOnboardingState(supabase, auth.user.id);
+    redirect(onboarding.isComplete ? "/app" : "/app/onboarding");
   }
 
   return (
