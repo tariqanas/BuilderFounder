@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
+import { upsertCandidateProfile } from "@/lib/candidate-profile";
 
 function isPdf(buffer: Buffer) {
   return buffer.subarray(0, 4).toString() === "%PDF";
@@ -91,19 +92,50 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Settings save failed." }, { status: 500 });
   }
 
-  const { error: cvError } = await supabase.from("cv_files").upsert(
+  const { data: cvRow, error: cvError } = await supabase
+    .from("cv_files")
+    .upsert(
     {
       user_id: user.id,
       storage_path: storagePath,
       extracted_text: extractedText,
     },
     { onConflict: "user_id" }
-  );
+    )
+    .select("id")
+    .maybeSingle();
 
   if (cvError) {
     console.error("[upload] cv metadata save failed");
     return NextResponse.json({ error: "CV save failed." }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, notice: emptyText ? "cv-empty-text" : "onboarding-activated" });
+  const profileResult = await upsertCandidateProfile({
+    userId: user.id,
+    cvFileId: cvRow?.id ?? null,
+    extractedText,
+  });
+
+  if (!profileResult.ok) {
+    console.error("[upload] candidate profile parsing failed", {
+      userId: user.id,
+      code: profileResult.error.code,
+      message: profileResult.error.message,
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    notice: emptyText ? "cv-empty-text" : "onboarding-activated",
+    candidateProfile: profileResult.ok
+      ? {
+          status: "ready",
+          completeness_score: profileResult.completenessScore,
+          confidence_score: profileResult.confidenceScore,
+        }
+      : {
+          status: "failed",
+          error: profileResult.error,
+        },
+  });
 }
