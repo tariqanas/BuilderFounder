@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserClientOrRedirect, isSubscriptionActive, requireUser } from "@/lib/server-auth";
 import { AppShell } from "@/components/app-shell";
+import { getOnboardingState } from "@/lib/onboarding-state";
 
 export const dynamic = "force-dynamic";
 
@@ -35,20 +36,13 @@ export default async function BillingPage({ searchParams }: { searchParams?: { c
     }
   }
 
-  const { data: settings } = await supabase
-    .from("user_settings")
-    .select("primary_stack, countries")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const { data: cv } = await supabase.from("cv_files").select("storage_path").eq("user_id", user.id).maybeSingle();
+  const onboarding = await getOnboardingState(supabase, user.id);
 
   const status = subscription?.status ?? "inactive";
   const active = isSubscriptionActive(status);
-  const hasProfile = Boolean(settings?.primary_stack && settings?.countries?.length && cv?.storage_path);
 
   if (searchParams?.checkout === "success" && active) {
-    redirect(hasProfile ? "/app" : "/app/onboarding");
+    redirect(onboarding.isComplete ? "/app" : "/app/onboarding");
   }
 
   return (
