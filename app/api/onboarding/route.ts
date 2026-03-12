@@ -164,6 +164,7 @@ export async function POST(request: Request) {
     cvFileId: cvRow?.id ?? null,
     normalizedText: preprocessedCv.normalizedText,
     sectionedText: preprocessedCv.sectionedText,
+    sections: preprocessedCv.sections,
     extractionQuality: preprocessedCv.extractionQuality,
     classification: cvClassification,
   });
