@@ -1,4 +1,4 @@
-export const CANDIDATE_PROFILE_PARSER_VERSION = "v3.0.0";
+export const CANDIDATE_PROFILE_PARSER_VERSION = "v4.0.0";
 
 export type CandidateRemotePreference = "remote" | "hybrid" | "onsite" | "unknown";
 
@@ -30,7 +30,11 @@ export type CandidateProfileRecord = {
   confidence_score: number;
 };
 
-export type CandidateProfileErrorCode = "CANDIDATE_PROFILE_EMPTY_TEXT" | "CANDIDATE_PROFILE_PERSIST_FAILED" | "CANDIDATE_PROFILE_UNKNOWN";
+export type CandidateProfileErrorCode =
+  | "CANDIDATE_PROFILE_EMPTY_TEXT"
+  | "CANDIDATE_PROFILE_LOW_QUALITY"
+  | "CANDIDATE_PROFILE_PERSIST_FAILED"
+  | "CANDIDATE_PROFILE_UNKNOWN";
 
 export type CandidateProfileError = {
   code: CandidateProfileErrorCode;
