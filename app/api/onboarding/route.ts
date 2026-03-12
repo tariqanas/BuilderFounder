@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase";
-import { extractPdfText, isE164Phone, isNonEmptyString, toInt, validateExtractedCvText } from "@/lib/validators";
+import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 import { upsertCandidateProfile } from "@/lib/candidate-profile";
+import { classifyCvText, preprocessCvText } from "@/lib/cv-intelligence";
 
 function isPdf(buffer: Buffer) {
   return buffer.subarray(0, 4).toString() === "%PDF";
@@ -66,14 +67,38 @@ export async function POST(request: Request) {
     );
   }
 
-  const cvValidation = validateExtractedCvText(extractedText);
-  if (!cvValidation.ok) {
-    console.warn("[onboarding] cv validation failed", { userId: user.id, ...cvValidation });
+  const preprocessedCv = preprocessCvText(extractedText);
+  console.info("[onboarding] extraction quality", {
+    userId: user.id,
+    extractionQuality: preprocessedCv.extractionQuality,
+    normalizedLength: preprocessedCv.normalizedText.length,
+  });
+
+  const cvClassification = await classifyCvText(preprocessedCv.sectionedText || preprocessedCv.normalizedText, preprocessedCv.extractionQuality);
+  console.info("[onboarding] cv classification", {
+    userId: user.id,
+    isCv: cvClassification.is_cv,
+    language: cvClassification.language,
+    confidence: cvClassification.confidence,
+    reason: cvClassification.reason,
+  });
+
+  if (!cvClassification.is_cv || cvClassification.confidence < 0.5) {
+    console.warn("[onboarding] cv validation failed", {
+      userId: user.id,
+      classification: cvClassification,
+      extractionQuality: preprocessedCv.extractionQuality,
+    });
     return NextResponse.json(
       {
-        error: cvValidation.message,
-        code: cvValidation.code,
-        details: cvValidation.details,
+        error: "The uploaded file is not recognized as a professional CV/resume in French or English.",
+        code: "CV_NOT_RESUME_LIKE",
+        details: {
+          language: cvClassification.language,
+          confidence: cvClassification.confidence,
+          reason: cvClassification.reason,
+          extraction_quality: preprocessedCv.extractionQuality,
+        },
       },
       { status: 400 }
     );
@@ -122,7 +147,7 @@ export async function POST(request: Request) {
     {
       user_id: user.id,
       storage_path: storagePath,
-      extracted_text: cvValidation.normalizedText,
+      extracted_text: preprocessedCv.sectionedText || preprocessedCv.normalizedText,
     },
     { onConflict: "user_id" }
     )
@@ -137,7 +162,10 @@ export async function POST(request: Request) {
   const profileResult = await upsertCandidateProfile({
     userId: user.id,
     cvFileId: cvRow?.id ?? null,
-    extractedText: cvValidation.normalizedText,
+    normalizedText: preprocessedCv.normalizedText,
+    sectionedText: preprocessedCv.sectionedText,
+    extractionQuality: preprocessedCv.extractionQuality,
+    classification: cvClassification,
   });
 
   if (!profileResult.ok) {

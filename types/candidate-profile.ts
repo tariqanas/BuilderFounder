@@ -1,4 +1,4 @@
-export const CANDIDATE_PROFILE_PARSER_VERSION = "v2.0.0";
+export const CANDIDATE_PROFILE_PARSER_VERSION = "v3.0.0";
 
 export type CandidateRemotePreference = "remote" | "hybrid" | "onsite" | "unknown";
 
@@ -13,6 +13,8 @@ export type CandidateProfile = {
   databases: string[];
   ai_data_skills: string[];
   domains: string[];
+  spoken_languages: string[];
+  management_signals: string[];
   remote_preference: CandidateRemotePreference;
   short_summary: string;
 };
