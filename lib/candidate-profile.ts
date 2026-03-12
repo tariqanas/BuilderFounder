@@ -1,3 +1,4 @@
+import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import {
   CANDIDATE_PROFILE_PARSER_VERSION,
@@ -9,13 +10,13 @@ import {
 } from "@/types/candidate-profile";
 
 const ROLE_PATTERNS: Array<{ role: string; patterns: RegExp[] }> = [
-  { role: "Full-stack Developer", patterns: [/\bfull[ -]?stack\b/i] },
-  { role: "Frontend Developer", patterns: [/\bfront[ -]?end\b/i, /\breact developer\b/i] },
-  { role: "Backend Developer", patterns: [/\bback[ -]?end\b/i, /\bnode(?:\.js)? developer\b/i, /\bjava developer\b/i] },
-  { role: "DevOps Engineer", patterns: [/\bdevops\b/i, /\bsre\b/i, /\bsite reliability\b/i] },
-  { role: "Data Engineer", patterns: [/\bdata engineer\b/i, /\betl\b/i] },
-  { role: "Data Scientist", patterns: [/\bdata scientist\b/i, /\bmachine learning engineer\b/i] },
-  { role: "AI Engineer", patterns: [/\bai engineer\b/i, /\bllm\b/i, /\bgenerative ai\b/i] },
+  { role: "Full-stack Developer", patterns: [/\bfull[ -]?stack\b/i, /\bd[eé]veloppeur full[ -]?stack\b/i] },
+  { role: "Frontend Developer", patterns: [/\bfront[ -]?end\b/i, /\bd[eé]veloppeur front\b/i] },
+  { role: "Backend Developer", patterns: [/\bback[ -]?end\b/i, /\bd[eé]veloppeur back\b/i] },
+  { role: "DevOps Engineer", patterns: [/\bdevops\b/i, /\bsre\b/i] },
+  { role: "Data Engineer", patterns: [/\bdata engineer\b/i, /\bing[eé]nieur data\b/i] },
+  { role: "Data Scientist", patterns: [/\bdata scientist\b/i] },
+  { role: "AI Engineer", patterns: [/\bai engineer\b/i, /\bing[eé]nieur ia\b/i, /\bllm\b/i] },
 ];
 
 const SENIORITY_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
@@ -23,7 +24,7 @@ const SENIORITY_PATTERNS: Array<{ label: string; pattern: RegExp }> = [
   { label: "staff", pattern: /\bstaff\b/i },
   { label: "lead", pattern: /\blead\b/i },
   { label: "senior", pattern: /\bsenior\b|\bsr\.?\b/i },
-  { label: "mid", pattern: /\bmid(?:dle)?\b|\bintermediate\b/i },
+  { label: "mid", pattern: /\bmid(?:dle)?\b|\bintermediate\b|\bconfirm[eé]\b/i },
   { label: "junior", pattern: /\bjunior\b|\bjr\.?\b/i },
 ];
 
@@ -33,19 +34,7 @@ const SKILL_CATALOG = {
   cloud_devops: ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "Ansible", "GitHub Actions", "GitLab CI", "Jenkins"],
   databases: ["PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch", "DynamoDB", "Snowflake", "BigQuery"],
   ai_data_skills: ["Machine Learning", "Deep Learning", "LLM", "RAG", "NLP", "Computer Vision", "Pandas", "PyTorch", "TensorFlow", "Data Analysis"],
-  domains: [
-    "Fintech",
-    "Healthcare",
-    "E-commerce",
-    "SaaS",
-    "Cybersecurity",
-    "Telecom",
-    "Automotive",
-    "Banking",
-    "Insurance",
-    "Retail",
-    "Public Sector",
-  ],
+  domains: ["Fintech", "Healthcare", "E-commerce", "SaaS", "Cybersecurity", "Telecom", "Automotive", "Banking", "Insurance", "Retail", "Public Sector"],
 } as const;
 
 const STACK_GROUPS: Array<{ stack: string; members: string[] }> = [
@@ -58,6 +47,16 @@ const STACK_GROUPS: Array<{ stack: string; members: string[] }> = [
   { stack: "Data/AI", members: ["Machine Learning", "LLM", "Pandas", "PyTorch", "TensorFlow", "Data Analysis"] },
   { stack: "Cloud/DevOps", members: ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform"] },
 ];
+
+const AI_PROFILE_PROMPT = `You extract structured candidate profile data from CV text in English or French.
+Return strict JSON only with this schema:
+{"title":string|null,"seniority":string|null,"years_experience":number|null,"primary_stack":string[],"programming_languages":string[],"frameworks":string[],"cloud_devops":string[],"databases":string[],"ai_data_skills":string[],"domains":string[],"remote_preference":"remote"|"hybrid"|"onsite"|"unknown","short_summary":string}
+Rules:
+- Use only evidence from the CV text. No hallucinations.
+- Keep arrays concise and technical.
+- short_summary max 220 chars, factual.
+- Support French and English wording.
+- If unknown, use null/[]/"unknown".`;
 
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, " ").trim().slice(0, 50000);
@@ -77,9 +76,7 @@ function detectSeniority(text: string): string | null {
 
 function detectYearsExperience(text: string): number | null {
   const matches = [...text.matchAll(/(\d{1,2})\+?\s*(?:years|year|yrs|ans|an)\s+(?:of\s+)?(?:experience|exp)/gi)];
-  const values = matches
-    .map((match) => Number(match[1]))
-    .filter((value) => Number.isFinite(value) && value >= 0 && value <= 50);
+  const values = matches.map((match) => Number(match[1])).filter((value) => Number.isFinite(value) && value >= 0 && value <= 50);
   if (!values.length) return null;
   return Math.max(...values);
 }
@@ -101,9 +98,9 @@ function detectPrimaryStack(profile: Pick<CandidateProfile, "programming_languag
 }
 
 function inferRemotePreference(text: string): CandidateRemotePreference {
-  if (/\bremote\b|\btelecommute\b|\bwork from home\b/i.test(text)) return "remote";
-  if (/\bhybrid\b/i.test(text)) return "hybrid";
-  if (/\bonsite\b|\bon-site\b|\bon site\b/i.test(text)) return "onsite";
+  if (/\bremote\b|\btelecommute\b|\bwork from home\b|\bt[eé]l[eé]travail\b/i.test(text)) return "remote";
+  if (/\bhybrid\b|\bhybride\b/i.test(text)) return "hybrid";
+  if (/\bonsite\b|\bon-site\b|\bon site\b|\bpr[eé]sentiel\b/i.test(text)) return "onsite";
   return "unknown";
 }
 
@@ -112,7 +109,7 @@ function buildSummary(profile: Omit<CandidateProfile, "short_summary">): string 
   const seniority = profile.seniority ? `${profile.seniority} ` : "";
   const years = profile.years_experience ? `${profile.years_experience}+ years` : "undisclosed experience";
   const focus = profile.primary_stack.length ? profile.primary_stack.join(", ") : "generalist stack";
-  return `${title} (${seniority}${years}) with focus on ${focus}.`;
+  return `${title} (${seniority}${years}) with focus on ${focus}.`.slice(0, 220);
 }
 
 function scoreCompleteness(profile: Omit<CandidateProfile, "short_summary">): number {
@@ -144,19 +141,7 @@ function scoreConfidence(text: string, profile: Omit<CandidateProfile, "short_su
   return Math.min(100, score);
 }
 
-export function parseCandidateProfile(rawText: string): CandidateProfileResult {
-  const normalized = normalizeText(rawText);
-
-  if (!normalized) {
-    return {
-      ok: false,
-      error: {
-        code: "CANDIDATE_PROFILE_EMPTY_TEXT",
-        message: "No extracted CV text available for candidate profile parsing.",
-      },
-    };
-  }
-
+function buildDeterministicProfile(normalized: string): CandidateProfile {
   const baseProfile = {
     title: detectRole(normalized),
     seniority: detectSeniority(normalized),
@@ -176,17 +161,123 @@ export function parseCandidateProfile(rawText: string): CandidateProfileResult {
     primary_stack: detectPrimaryStack(baseProfile),
   };
 
-  const short_summary = buildSummary(withStack);
-  const profile: CandidateProfile = {
+  return {
     ...withStack,
-    short_summary,
+    short_summary: buildSummary(withStack),
+  };
+}
+
+function parseCandidateProfileJson(raw: string): CandidateProfile | null {
+  try {
+    const parsed = JSON.parse(raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "")) as Partial<CandidateProfile>;
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const ensureStringArray = (value: unknown) => (Array.isArray(value) ? value.map((v) => String(v).trim()).filter(Boolean).slice(0, 20) : []);
+    const remote = parsed.remote_preference;
+    const remote_preference: CandidateRemotePreference = remote === "remote" || remote === "hybrid" || remote === "onsite" ? remote : "unknown";
+
+    return {
+      title: parsed.title ? String(parsed.title).trim().slice(0, 120) : null,
+      seniority: parsed.seniority ? String(parsed.seniority).trim().slice(0, 60) : null,
+      years_experience:
+        typeof parsed.years_experience === "number" && Number.isFinite(parsed.years_experience)
+          ? Math.max(0, Math.min(50, Math.round(parsed.years_experience)))
+          : null,
+      primary_stack: ensureStringArray(parsed.primary_stack),
+      programming_languages: ensureStringArray(parsed.programming_languages),
+      frameworks: ensureStringArray(parsed.frameworks),
+      cloud_devops: ensureStringArray(parsed.cloud_devops),
+      databases: ensureStringArray(parsed.databases),
+      ai_data_skills: ensureStringArray(parsed.ai_data_skills),
+      domains: ensureStringArray(parsed.domains),
+      remote_preference,
+      short_summary: parsed.short_summary ? String(parsed.short_summary).trim().slice(0, 220) : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function parseCandidateProfileWithAI(normalizedText: string): Promise<CandidateProfile | null> {
+  const apiKey = env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: env.OPENAI_MODEL,
+      input: [
+        { role: "system", content: AI_PROFILE_PROMPT },
+        { role: "user", content: normalizedText.slice(0, 25000) },
+      ],
+      max_output_tokens: 700,
+    }),
+  });
+
+  if (!response.ok) {
+    console.error("[candidate-profile] ai parsing http error", { status: response.status });
+    return null;
+  }
+
+  const payload = (await response.json()) as { output_text?: string };
+  if (!payload.output_text) return null;
+
+  return parseCandidateProfileJson(payload.output_text);
+}
+
+export async function parseCandidateProfile(rawText: string): Promise<CandidateProfileResult> {
+  const normalized = normalizeText(rawText);
+
+  if (!normalized) {
+    return {
+      ok: false,
+      error: {
+        code: "CANDIDATE_PROFILE_EMPTY_TEXT",
+        message: "No extracted CV text available for candidate profile parsing.",
+      },
+    };
+  }
+
+  let profile = buildDeterministicProfile(normalized);
+
+  try {
+    const aiProfile = await parseCandidateProfileWithAI(normalized);
+    if (aiProfile) {
+      profile = {
+        ...profile,
+        ...aiProfile,
+        short_summary: aiProfile.short_summary || buildSummary(aiProfile),
+      };
+    } else if (env.OPENAI_API_KEY) {
+      console.error("[candidate-profile] ai parsing failed, fallback to deterministic profile");
+    }
+  } catch (error) {
+    console.error("[candidate-profile] ai parsing failure", error);
+  }
+
+  const withoutSummary: Omit<CandidateProfile, "short_summary"> = {
+    title: profile.title,
+    seniority: profile.seniority,
+    years_experience: profile.years_experience,
+    primary_stack: profile.primary_stack,
+    programming_languages: profile.programming_languages,
+    frameworks: profile.frameworks,
+    cloud_devops: profile.cloud_devops,
+    databases: profile.databases,
+    ai_data_skills: profile.ai_data_skills,
+    domains: profile.domains,
+    remote_preference: profile.remote_preference,
   };
 
   return {
     ok: true,
     profile,
-    completenessScore: scoreCompleteness(withStack),
-    confidenceScore: scoreConfidence(normalized, withStack),
+    completenessScore: scoreCompleteness(withoutSummary),
+    confidenceScore: scoreConfidence(normalized, withoutSummary),
   };
 }
 
@@ -196,7 +287,7 @@ export async function upsertCandidateProfile(params: {
   extractedText: string;
 }): Promise<CandidateProfileResult> {
   try {
-    const parsed = parseCandidateProfile(params.extractedText);
+    const parsed = await parseCandidateProfile(params.extractedText);
     if (!parsed.ok) return parsed;
 
     const normalizedText = normalizeText(params.extractedText);
