@@ -3,7 +3,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase";
 import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 import { upsertCandidateProfile } from "@/lib/candidate-profile";
-import { classifyCvText, preprocessCvText } from "@/lib/cv-intelligence";
+import { classifyCvText, extractCvFromPdfWithOpenAI, preprocessCvText } from "@/lib/cv-intelligence";
 
 function isPdf(buffer: Buffer) {
   return buffer.subarray(0, 4).toString() === "%PDF";
@@ -53,28 +53,58 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please review your criteria and contact details." }, { status: 400 });
   }
 
-  let extractedText = "";
+  let openAiExtraction = null;
   try {
-    extractedText = await extractPdfText(fileBuffer);
+    openAiExtraction = await extractCvFromPdfWithOpenAI(fileBuffer, file.name || "cv.pdf");
   } catch (error) {
-    console.error("[onboarding] cv extraction failed", { userId: user.id, error });
-    return NextResponse.json(
-      {
-        error: "We could not read text from your PDF CV. Please upload a readable French or English resume.",
-        code: "CV_EXTRACTION_FAILED",
-      },
-      { status: 400 }
-    );
+    console.error("[onboarding] openai cv extraction failed", { userId: user.id, error });
   }
 
-  const preprocessedCv = preprocessCvText(extractedText);
+  let preprocessedCv = preprocessCvText(openAiExtraction?.text_excerpt ?? "");
+  let cvClassification = await classifyCvText(preprocessedCv.sectionedText || preprocessedCv.normalizedText, preprocessedCv.extractionQuality);
+  let strategy: "openai_pdf" | "text_fallback" = "openai_pdf";
+
+  if (openAiExtraction) {
+    preprocessedCv = preprocessCvText(openAiExtraction.text_excerpt);
+    cvClassification = {
+      is_cv: openAiExtraction.is_cv,
+      language: openAiExtraction.language,
+      confidence: openAiExtraction.extraction_quality,
+      reason: openAiExtraction.is_cv
+        ? "Validated by OpenAI direct PDF classification."
+        : openAiExtraction.rejection_reason || "OpenAI determined the PDF is not a usable CV/resume.",
+      deterministicSignals: [],
+    };
+  } else {
+    strategy = "text_fallback";
+    let extractedText = "";
+    try {
+      extractedText = await extractPdfText(fileBuffer);
+    } catch (error) {
+      console.error("[onboarding] fallback cv extraction failed", { userId: user.id, error });
+    }
+
+    preprocessedCv = preprocessCvText(extractedText);
+    if (!preprocessedCv.normalizedText) {
+      return NextResponse.json(
+        {
+          error: "We could not analyze your PDF at the moment. Please retry in a few seconds.",
+          code: "CV_AI_EXTRACTION_UNAVAILABLE",
+        },
+        { status: 503 }
+      );
+    }
+
+    cvClassification = await classifyCvText(preprocessedCv.sectionedText || preprocessedCv.normalizedText, preprocessedCv.extractionQuality);
+  }
+
   console.info("[onboarding] extraction quality", {
     userId: user.id,
     extractionQuality: preprocessedCv.extractionQuality,
     normalizedLength: preprocessedCv.normalizedText.length,
+    strategy,
   });
 
-  const cvClassification = await classifyCvText(preprocessedCv.sectionedText || preprocessedCv.normalizedText, preprocessedCv.extractionQuality);
   console.info("[onboarding] cv classification", {
     userId: user.id,
     isCv: cvClassification.is_cv,
@@ -88,16 +118,18 @@ export async function POST(request: Request) {
       userId: user.id,
       classification: cvClassification,
       extractionQuality: preprocessedCv.extractionQuality,
+      openAiRejectionReason: openAiExtraction?.rejection_reason ?? null,
     });
     return NextResponse.json(
       {
-        error: "The uploaded file is not recognized as a professional CV/resume in French or English.",
+        error: "The uploaded file is not recognized as a usable professional CV/resume.",
         code: "CV_NOT_RESUME_LIKE",
         details: {
           language: cvClassification.language,
           confidence: cvClassification.confidence,
           reason: cvClassification.reason,
           extraction_quality: preprocessedCv.extractionQuality,
+          openai_rejection_reason: openAiExtraction?.rejection_reason ?? null,
         },
       },
       { status: 400 }
@@ -167,6 +199,27 @@ export async function POST(request: Request) {
     sections: preprocessedCv.sections,
     extractionQuality: preprocessedCv.extractionQuality,
     classification: cvClassification,
+    openAiExtraction: openAiExtraction
+      ? {
+          language: openAiExtraction.language,
+          extraction_quality: openAiExtraction.extraction_quality,
+          title: openAiExtraction.title,
+          seniority: openAiExtraction.seniority,
+          years_experience: openAiExtraction.years_experience,
+          programming_languages: openAiExtraction.programming_languages,
+          frameworks: openAiExtraction.frameworks,
+          cloud_devops: openAiExtraction.cloud_devops,
+          databases: openAiExtraction.databases,
+          ai_data_skills: openAiExtraction.ai_data_skills,
+          primary_stack: openAiExtraction.primary_stack,
+          domains: openAiExtraction.domains,
+          spoken_languages: openAiExtraction.spoken_languages,
+          management_signals: openAiExtraction.management_signals,
+          remote_preference: openAiExtraction.remote_preference,
+          short_summary: openAiExtraction.short_summary,
+          text_excerpt: openAiExtraction.text_excerpt,
+        }
+      : undefined,
   });
 
   if (!profileResult.ok) {

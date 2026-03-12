@@ -12,12 +12,33 @@ import {
 
 type CvSections = Record<string, string>;
 
+type OpenAiCvExtractionInput = {
+  language: "fr" | "en" | "mixed" | "unknown";
+  extraction_quality: number;
+  title: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  programming_languages: string[];
+  frameworks: string[];
+  cloud_devops: string[];
+  databases: string[];
+  ai_data_skills: string[];
+  primary_stack: string[];
+  domains: string[];
+  spoken_languages: string[];
+  management_signals: string[];
+  remote_preference: CandidateRemotePreference;
+  short_summary: string;
+  text_excerpt: string;
+};
+
 type ParseContext = {
   normalizedText: string;
   sectionedText: string;
   sections?: CvSections;
   classification: CvClassification;
   extractionQuality: number;
+  openAiExtraction?: OpenAiCvExtractionInput;
 };
 
 type ParseStrategy = "openai" | "deterministic_fallback";
@@ -441,6 +462,25 @@ function buildProfileFromEvidence(evidence: DeterministicEvidence): CandidatePro
   };
 }
 
+function buildProfileFromOpenAiExtraction(extraction: OpenAiCvExtractionInput): CandidateProfile {
+  return {
+    title: extraction.title,
+    seniority: extraction.seniority,
+    years_experience: extraction.years_experience,
+    primary_stack: extraction.primary_stack,
+    programming_languages: extraction.programming_languages,
+    frameworks: extraction.frameworks,
+    cloud_devops: extraction.cloud_devops,
+    databases: extraction.databases,
+    ai_data_skills: extraction.ai_data_skills,
+    domains: extraction.domains,
+    spoken_languages: extraction.spoken_languages,
+    management_signals: extraction.management_signals,
+    remote_preference: extraction.remote_preference,
+    short_summary: extraction.short_summary,
+  };
+}
+
 function mergeAiProfile(base: CandidateProfile, ai: AiEvidencePayload): CandidateProfile {
   return {
     ...base,
@@ -565,18 +605,25 @@ function hasMinimumUsableSignal(profile: CandidateProfile): boolean {
 }
 
 export async function parseCandidateProfile(context: ParseContext): Promise<CandidateProfileResult> {
-  const normalized = normalizeText(context.normalizedText);
+  const normalized = normalizeText(context.normalizedText || context.openAiExtraction?.text_excerpt || "");
   if (!normalized) {
     return { ok: false, error: { code: "CANDIDATE_PROFILE_EMPTY_TEXT", message: "No extracted CV text available for candidate profile parsing." } };
   }
 
   const sections = buildSections(context, normalized);
   const deterministicEvidence = extractDeterministicEvidence(sections, normalized);
-  let profile = buildProfileFromEvidence(deterministicEvidence);
+  let profile = context.openAiExtraction ? buildProfileFromOpenAiExtraction(context.openAiExtraction) : buildProfileFromEvidence(deterministicEvidence);
   let aiPayload: AiEvidencePayload | null = null;
-  let strategy: ParseStrategy = "deterministic_fallback";
+  let strategy: ParseStrategy = context.openAiExtraction ? "openai" : "deterministic_fallback";
 
   try {
+    if (context.openAiExtraction) {
+      profile = {
+        ...profile,
+        title: profile.title ?? deterministicEvidence.titleCandidates[0] ?? null,
+        years_experience: profile.years_experience ?? (deterministicEvidence.yearsSignals[0]?.years ?? null),
+      };
+    }
     aiPayload = await parseWithAI({ cleanedText: normalized, sections, deterministicEvidence });
     if (aiPayload) {
       profile = mergeAiProfile(profile, aiPayload);
@@ -615,6 +662,7 @@ export async function upsertCandidateProfile(params: {
   sections?: CvSections;
   extractionQuality: number;
   classification: CvClassification;
+  openAiExtraction?: OpenAiCvExtractionInput;
 }): Promise<CandidateProfileResult> {
   try {
     const parsed = await parseCandidateProfile({
@@ -623,6 +671,7 @@ export async function upsertCandidateProfile(params: {
       sections: params.sections,
       classification: params.classification,
       extractionQuality: params.extractionQuality,
+      openAiExtraction: params.openAiExtraction,
     });
     if (!parsed.ok) return parsed;
 

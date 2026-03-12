@@ -15,6 +15,28 @@ export type CvPreprocessResult = {
   extractionQuality: number;
 };
 
+export type CvStructuredExtraction = {
+  is_cv: boolean;
+  language: "fr" | "en" | "mixed" | "unknown";
+  extraction_quality: number;
+  title: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  programming_languages: string[];
+  frameworks: string[];
+  cloud_devops: string[];
+  databases: string[];
+  ai_data_skills: string[];
+  primary_stack: string[];
+  domains: string[];
+  spoken_languages: string[];
+  management_signals: string[];
+  remote_preference: "remote" | "hybrid" | "onsite" | "unknown";
+  short_summary: string;
+  rejection_reason: string | null;
+  text_excerpt: string;
+};
+
 const SECTION_PATTERNS: Array<{ key: string; patterns: RegExp[] }> = [
   { key: "header", patterns: [/^(contact|coordonn[ée]es?|identity|identit[ée]|informations? personnelles?)$/i] },
   { key: "summary", patterns: [/^(summary|profile|about me|professional summary|profil|r[ée]sum[ée]|objectif)$/i] },
@@ -131,6 +153,152 @@ function parseJson<T>(raw: string): T | null {
     return JSON.parse(raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "")) as T;
   } catch {
     return null;
+  }
+}
+
+const CV_EXTRACTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    is_cv: { type: "boolean" },
+    language: { type: "string", enum: ["fr", "en", "mixed", "unknown"] },
+    extraction_quality: { type: "number", minimum: 0, maximum: 1 },
+    title: { type: ["string", "null"] },
+    seniority: { type: ["string", "null"] },
+    years_experience: { type: ["number", "null"] },
+    programming_languages: { type: "array", items: { type: "string" } },
+    frameworks: { type: "array", items: { type: "string" } },
+    cloud_devops: { type: "array", items: { type: "string" } },
+    databases: { type: "array", items: { type: "string" } },
+    ai_data_skills: { type: "array", items: { type: "string" } },
+    primary_stack: { type: "array", items: { type: "string" } },
+    domains: { type: "array", items: { type: "string" } },
+    spoken_languages: { type: "array", items: { type: "string" } },
+    management_signals: { type: "array", items: { type: "string" } },
+    remote_preference: { type: "string", enum: ["remote", "hybrid", "onsite", "unknown"] },
+    short_summary: { type: "string" },
+    rejection_reason: { type: ["string", "null"] },
+    text_excerpt: { type: "string" },
+  },
+  required: [
+    "is_cv",
+    "language",
+    "extraction_quality",
+    "title",
+    "seniority",
+    "years_experience",
+    "programming_languages",
+    "frameworks",
+    "cloud_devops",
+    "databases",
+    "ai_data_skills",
+    "primary_stack",
+    "domains",
+    "spoken_languages",
+    "management_signals",
+    "remote_preference",
+    "short_summary",
+    "rejection_reason",
+    "text_excerpt",
+  ],
+} as const;
+
+function isStructuredExtraction(value: unknown): value is CvStructuredExtraction {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Partial<CvStructuredExtraction>;
+  return (
+    typeof v.is_cv === "boolean" &&
+    typeof v.language === "string" &&
+    typeof v.extraction_quality === "number" &&
+    Array.isArray(v.programming_languages) &&
+    Array.isArray(v.frameworks) &&
+    Array.isArray(v.cloud_devops) &&
+    Array.isArray(v.databases) &&
+    Array.isArray(v.ai_data_skills) &&
+    Array.isArray(v.primary_stack) &&
+    Array.isArray(v.domains) &&
+    Array.isArray(v.spoken_languages) &&
+    Array.isArray(v.management_signals) &&
+    typeof v.short_summary === "string" &&
+    typeof v.text_excerpt === "string"
+  );
+}
+
+export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "cv.pdf"): Promise<CvStructuredExtraction | null> {
+  if (!env.OPENAI_API_KEY) return null;
+
+  const form = new FormData();
+  form.append("purpose", "user_data");
+  form.append("file", new Blob([new Uint8Array(pdfBuffer)], { type: "application/pdf" }), filename);
+
+  const uploadResponse = await fetch("https://api.openai.com/v1/files", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: form,
+  });
+
+  if (!uploadResponse.ok) return null;
+  const uploaded = (await uploadResponse.json()) as { id?: string };
+  const fileId = uploaded.id;
+  if (!fileId) return null;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: env.OPENAI_MODEL,
+        input: [
+          {
+            role: "system",
+            content:
+              "You are a strict CV parser. Read the attached PDF directly. If document is not a usable professional resume/CV, set is_cv=false and explain in rejection_reason. Never hallucinate missing fields.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "input_file", file_id: fileId },
+              {
+                type: "input_text",
+                text:
+                  "Return strict JSON only. Detect language, extraction quality, and candidate profile fields. text_excerpt should contain compact resume text (max 2500 chars) to support downstream matching.",
+              },
+            ],
+          },
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "cv_pdf_extraction",
+            strict: true,
+            schema: CV_EXTRACTION_SCHEMA,
+          },
+        },
+        max_output_tokens: 2600,
+      }),
+    });
+
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { output_text?: string };
+    if (!payload.output_text) return null;
+
+    const parsed = parseJson<unknown>(payload.output_text);
+    if (!isStructuredExtraction(parsed)) return null;
+    return {
+      ...parsed,
+      extraction_quality: Number(Math.max(0, Math.min(1, parsed.extraction_quality)).toFixed(3)),
+      text_excerpt: parsed.text_excerpt.slice(0, 2500),
+      short_summary: parsed.short_summary.slice(0, 220),
+      rejection_reason: parsed.rejection_reason?.slice(0, 400) ?? null,
+    };
+  } finally {
+    await fetch(`https://api.openai.com/v1/files/${fileId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    }).catch(() => undefined);
   }
 }
 
