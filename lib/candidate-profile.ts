@@ -17,6 +17,26 @@ type ParseContext = {
   extractionQuality: number;
 };
 
+type ParseStrategy = "openai" | "deterministic_fallback";
+
+type ParsedCandidateProfilePayload = {
+  title: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  primary_stack: string[];
+  programming_languages: string[];
+  frameworks: string[];
+  cloud_devops: string[];
+  databases: string[];
+  ai_data_skills: string[];
+  domains: string[];
+  spoken_languages: string[];
+  management_signals: string[];
+  remote_preference: CandidateRemotePreference;
+  short_summary: string;
+  extraction_notes: string[];
+};
+
 const AI_PROFILE_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -35,6 +55,7 @@ const AI_PROFILE_SCHEMA = {
     management_signals: { type: "array", items: { type: "string" } },
     remote_preference: { type: "string", enum: ["remote", "hybrid", "onsite", "unknown"] },
     short_summary: { type: "string" },
+    extraction_notes: { type: "array", items: { type: "string" } },
   },
   required: [
     "title",
@@ -51,8 +72,25 @@ const AI_PROFILE_SCHEMA = {
     "management_signals",
     "remote_preference",
     "short_summary",
+    "extraction_notes",
   ],
-};
+} as const;
+
+const OPENAI_STRUCTURING_PROMPT = [
+  "You are a precise CV structuring engine for technical freelance hiring.",
+  "Input text can be French, English, or mixed.",
+  "Output MUST strictly match the provided JSON schema.",
+  "Never include markdown. Never include prose outside JSON.",
+  "Quality rules:",
+  "- Use only explicit evidence from the CV text.",
+  "- Never invent technologies, years, domains, or management signals.",
+  "- Prefer null over guessing for missing/ambiguous fields.",
+  "- Determine years_experience by priority: (1) explicit years mention, (2) chronology inference.",
+  "- title must reflect dominant positioning of the candidate (not aspirations).",
+  "- short_summary must be concise and concrete, based on real evidence.",
+  "- Keep arrays deduplicated and compact.",
+  "- Preserve language names and stack terms as written when possible; normalization is downstream.",
+].join("\n");
 
 const TECH_SYNONYMS: Record<string, string> = {
   js: "JavaScript",
@@ -61,25 +99,83 @@ const TECH_SYNONYMS: Record<string, string> = {
   typescript: "TypeScript",
   "node js": "Node.js",
   nodejs: "Node.js",
+  "node.js": "Node.js",
+  reactjs: "React",
+  "react.js": "React",
+  nextjs: "Next.js",
+  "next js": "Next.js",
+  "next.js": "Next.js",
+  "vue js": "Vue.js",
+  vuejs: "Vue.js",
   mongo: "MongoDB",
   mongodb: "MongoDB",
   postgres: "PostgreSQL",
   postgresql: "PostgreSQL",
+  "ms sql": "SQL Server",
+  mssql: "SQL Server",
   k8s: "Kubernetes",
   "ci/cd": "CI/CD",
+  cicd: "CI/CD",
   "gitlab ci": "GitLab CI",
   "github actions": "GitHub Actions",
   kafka: "Kafka",
   java: "Java",
+  golang: "Go",
+  gcp: "GCP",
+};
+
+const LANGUAGE_SYNONYMS: Record<string, string> = {
+  fr: "French",
+  francais: "French",
+  français: "French",
+  french: "French",
+  en: "English",
+  anglais: "English",
+  english: "English",
+  espagnol: "Spanish",
+  spanish: "Spanish",
+  allemand: "German",
+  german: "German",
+  italien: "Italian",
+  italian: "Italian",
+  arabe: "Arabic",
+  arabic: "Arabic",
+};
+
+const DOMAIN_SYNONYMS: Record<string, string> = {
+  fintech: "Fintech",
+  "financial services": "Finance",
+  finance: "Finance",
+  banking: "Banking",
+  banque: "Banking",
+  insurance: "Insurance",
+  assurance: "Insurance",
+  healthcare: "Healthcare",
+  sante: "Healthcare",
+  santé: "Healthcare",
+  retail: "Retail",
+  ecommerce: "E-commerce",
+  "e-commerce": "E-commerce",
+  telecom: "Telecom",
+  saas: "SaaS",
+  "public sector": "Public Sector",
+  government: "Public Sector",
+  automotive: "Automotive",
+  industrie: "Industry",
+  industry: "Industry",
 };
 
 const SENIORITY_SYNONYMS: Record<string, string> = {
   jr: "junior",
   junior: "junior",
+  "junior+": "junior",
   confirme: "mid",
+  confirmé: "mid",
   confirmed: "mid",
   mid: "mid",
+  intermediate: "mid",
   senior: "senior",
+  "sénior": "senior",
   lead: "lead",
   staff: "staff",
   principal: "principal",
@@ -101,29 +197,31 @@ function uniq(items: string[]): string[] {
   return [...new Set(items.map((x) => x.trim()).filter(Boolean))];
 }
 
+function tokenizeList(values: string[]): string[] {
+  return values.flatMap((value) => value.split(/[;,]|\band\b|\bet\b|\//i).map((v) => v.trim())).filter(Boolean);
+}
+
 function normalizeLabel(value: string): string {
-  const key = value.toLowerCase().replace(/[+|/&]/g, " ").replace(/\s+/g, " ").trim();
+  const key = value.toLowerCase().replace(/[+|&]/g, " ").replace(/\s+/g, " ").trim();
   return TECH_SYNONYMS[key] ?? value.trim();
 }
 
 function normalizeTechList(values: string[]): string[] {
-  return uniq(
-    values
-      .flatMap((value) => value.split(/[;,]|\band\b|\bet\b|\//i))
-      .map((v) => normalizeLabel(v))
-      .filter((v) => v.length > 1)
-  ).slice(0, 30);
+  return uniq(tokenizeList(values).map((v) => normalizeLabel(v)).filter((v) => v.length > 1)).slice(0, 30);
 }
 
 function normalizeLanguages(values: string[]): string[] {
-  const mapping: Record<string, string> = {
-    fr: "French",
-    french: "French",
-    francais: "French",
-    anglais: "English",
-    english: "English",
-  };
-  return uniq(values.map((value) => mapping[value.toLowerCase().trim()] ?? value.trim())).slice(0, 10);
+  return uniq(tokenizeList(values).map((value) => {
+    const key = value.toLowerCase().trim();
+    return LANGUAGE_SYNONYMS[key] ?? value.trim();
+  })).slice(0, 10);
+}
+
+function normalizeDomains(values: string[]): string[] {
+  return uniq(tokenizeList(values).map((value) => {
+    const key = value.toLowerCase().trim();
+    return DOMAIN_SYNONYMS[key] ?? value.trim();
+  })).slice(0, 15);
 }
 
 function normalizeRemote(remote: string): CandidateRemotePreference {
@@ -188,7 +286,7 @@ function deterministicProfile(text: string): CandidateProfile {
     cloud_devops: normalizeTechList((text.match(/\b(AWS|Azure|GCP|Docker|Kubernetes|Terraform|GitHub Actions|GitLab CI|Jenkins|CI\/CD|DevOps|Kafka)\b/gi) ?? [])),
     databases: normalizeTechList((text.match(/\b(Postgres(?:ql)?|Mongo(?:db)?|MySQL|Redis|BigQuery|Snowflake|Elasticsearch)\b/gi) ?? [])),
     ai_data_skills: normalizeTechList((text.match(/\b(LLM|RAG|NLP|Machine Learning|Deep Learning|PyTorch|TensorFlow|Pandas|Data Analysis)\b/gi) ?? [])),
-    domains: uniq(text.match(/\b(Fintech|Banking|Insurance|Healthcare|Retail|E-commerce|SaaS|Telecom|Public Sector|Automotive)\b/gi) ?? []),
+    domains: normalizeDomains(text.match(/\b(Fintech|Banking|Insurance|Healthcare|Retail|E-commerce|SaaS|Telecom|Public Sector|Automotive)\b/gi) ?? []),
     spoken_languages: normalizeLanguages(text.match(/\b(French|English|Français|Anglais|Espagnol|Spanish|German|Allemand)\b/gi) ?? []),
     management_signals: uniq(text.match(/\b(team lead|mentoring|managed|management|leadership|encadrement|pilotage|manager)\b/gi) ?? []),
     remote_preference: remote,
@@ -212,7 +310,8 @@ function profileSummary(profile: CandidateProfile): string {
   const seniority = profile.seniority ? `${profile.seniority} ` : "";
   const years = profile.years_experience !== null ? `${profile.years_experience} years` : "experience not explicitly quantified";
   const stack = profile.primary_stack.length ? profile.primary_stack.join(" / ") : "generalist stack";
-  return `${role} (${seniority}${years}) focused on ${stack}.`.slice(0, 220);
+  const domains = profile.domains.length ? ` Domain exposure: ${profile.domains.slice(0, 2).join(", ")}.` : "";
+  return `${role} (${seniority}${years}) focused on ${stack}.${domains}`.slice(0, 220);
 }
 
 function normalizeProfile(profile: CandidateProfile): CandidateProfile {
@@ -226,9 +325,9 @@ function normalizeProfile(profile: CandidateProfile): CandidateProfile {
     cloud_devops: normalizeTechList(profile.cloud_devops),
     databases: normalizeTechList(profile.databases),
     ai_data_skills: normalizeTechList(profile.ai_data_skills),
-    domains: uniq(profile.domains).slice(0, 15),
+    domains: normalizeDomains(profile.domains),
     spoken_languages: normalizeLanguages(profile.spoken_languages),
-    management_signals: uniq(profile.management_signals).slice(0, 10),
+    management_signals: uniq(profile.management_signals.map((signal) => signal.trim())).slice(0, 10),
     remote_preference: normalizeRemote(profile.remote_preference),
     primary_stack: normalizeTechList(profile.primary_stack),
     short_summary: profile.short_summary.trim().slice(0, 220),
@@ -239,7 +338,43 @@ function normalizeProfile(profile: CandidateProfile): CandidateProfile {
   return normalized;
 }
 
-async function parseWithAI(sectionedText: string): Promise<CandidateProfile | null> {
+function toCandidateProfile(payload: ParsedCandidateProfilePayload): CandidateProfile {
+  return {
+    title: payload.title,
+    seniority: payload.seniority,
+    years_experience: payload.years_experience,
+    primary_stack: payload.primary_stack,
+    programming_languages: payload.programming_languages,
+    frameworks: payload.frameworks,
+    cloud_devops: payload.cloud_devops,
+    databases: payload.databases,
+    ai_data_skills: payload.ai_data_skills,
+    domains: payload.domains,
+    spoken_languages: payload.spoken_languages,
+    management_signals: payload.management_signals,
+    remote_preference: payload.remote_preference,
+    short_summary: payload.short_summary,
+  };
+}
+
+function isStructuringPayload(value: unknown): value is ParsedCandidateProfilePayload {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Partial<ParsedCandidateProfilePayload>;
+  return (
+    Array.isArray(v.primary_stack) &&
+    Array.isArray(v.programming_languages) &&
+    Array.isArray(v.frameworks) &&
+    Array.isArray(v.cloud_devops) &&
+    Array.isArray(v.databases) &&
+    Array.isArray(v.ai_data_skills) &&
+    Array.isArray(v.domains) &&
+    Array.isArray(v.spoken_languages) &&
+    Array.isArray(v.management_signals) &&
+    Array.isArray(v.extraction_notes)
+  );
+}
+
+async function parseWithAI(sectionedText: string): Promise<ParsedCandidateProfilePayload | null> {
   if (!env.OPENAI_API_KEY) return null;
 
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -253,10 +388,12 @@ async function parseWithAI(sectionedText: string): Promise<CandidateProfile | nu
       input: [
         {
           role: "system",
-          content:
-            "Extract an accurate candidate profile from CV sections (French/English). Use only evidence in text. Return strict JSON schema.",
+          content: OPENAI_STRUCTURING_PROMPT,
         },
-        { role: "user", content: sectionedText.slice(0, 28000) },
+        {
+          role: "user",
+          content: `Extract candidate profile fields from this CV content:\n\n${sectionedText.slice(0, 32000)}`,
+        },
       ],
       text: {
         format: {
@@ -266,7 +403,7 @@ async function parseWithAI(sectionedText: string): Promise<CandidateProfile | nu
           schema: AI_PROFILE_SCHEMA,
         },
       },
-      max_output_tokens: 1200,
+      max_output_tokens: 1400,
     }),
   });
 
@@ -277,41 +414,61 @@ async function parseWithAI(sectionedText: string): Promise<CandidateProfile | nu
 
   const payload = (await response.json()) as { output_text?: string };
   if (!payload.output_text) return null;
-  return parseJson<CandidateProfile>(payload.output_text);
+
+  const parsed = parseJson<unknown>(payload.output_text);
+  if (!isStructuringPayload(parsed)) return null;
+  return parsed;
 }
 
 function scoreCompleteness(profile: CandidateProfile): number {
   const weighted: Array<{ present: boolean; weight: number }> = [
-    { present: Boolean(profile.title), weight: 14 },
+    { present: Boolean(profile.title), weight: 12 },
     { present: Boolean(profile.seniority), weight: 8 },
     { present: profile.years_experience !== null, weight: 12 },
-    { present: profile.primary_stack.length > 0, weight: 12 },
-    { present: profile.programming_languages.length > 0, weight: 12 },
-    { present: profile.frameworks.length > 0, weight: 10 },
-    { present: profile.cloud_devops.length > 0, weight: 10 },
+    { present: profile.primary_stack.length > 0, weight: 10 },
+    { present: profile.programming_languages.length > 0, weight: 10 },
+    { present: profile.frameworks.length > 0, weight: 8 },
+    { present: profile.cloud_devops.length > 0, weight: 8 },
     { present: profile.databases.length > 0, weight: 8 },
-    { present: profile.domains.length > 0, weight: 7 },
-    { present: profile.short_summary.length > 25, weight: 7 },
+    { present: profile.ai_data_skills.length > 0, weight: 6 },
+    { present: profile.domains.length > 0, weight: 6 },
+    { present: profile.spoken_languages.length > 0, weight: 5 },
+    { present: profile.management_signals.length > 0, weight: 5 },
+    { present: profile.short_summary.length > 35, weight: 2 },
   ];
   return weighted.reduce((sum, i) => sum + (i.present ? i.weight : 0), 0);
 }
 
-function scoreConfidence(profile: CandidateProfile, context: ParseContext, usedAi: boolean): number {
-  let score = 20;
-  score += Math.round(context.extractionQuality * 18);
+function scoreConfidence(profile: CandidateProfile, context: ParseContext, strategy: ParseStrategy): number {
+  let score = 8;
+  score += Math.round(context.extractionQuality * 26);
   score += Math.round(context.classification.confidence * 22);
-  if (usedAi) score += 10;
-  if (profile.title) score += 7;
-  if (profile.years_experience !== null) score += 8;
+  if (strategy === "openai") score += 12;
 
-  const skillCoverage = profile.programming_languages.length + profile.frameworks.length + profile.cloud_devops.length + profile.databases.length;
-  score += Math.min(20, skillCoverage * 2);
+  const populatedFields = [
+    Boolean(profile.title),
+    Boolean(profile.seniority),
+    profile.years_experience !== null,
+    profile.programming_languages.length > 0,
+    profile.frameworks.length > 0,
+    profile.cloud_devops.length > 0,
+    profile.databases.length > 0,
+    profile.short_summary.length > 30,
+  ].filter(Boolean).length;
+  score += populatedFields * 3;
 
-  if (profile.primary_stack.length && profile.title) score += 5;
-  if (profile.short_summary.length < 20) score -= 8;
-  if (!context.classification.is_cv) score -= 25;
+  if (profile.years_experience !== null && profile.seniority === "junior" && profile.years_experience > 6) score -= 8;
+  if (profile.years_experience !== null && ["staff", "principal"].includes(profile.seniority ?? "") && profile.years_experience < 5) score -= 10;
+
+  if (!context.classification.is_cv) score -= 28;
+  if (context.extractionQuality < 0.65) score -= 12;
 
   return Math.max(0, Math.min(100, score));
+}
+
+function hasMinimumUsableSignal(profile: CandidateProfile): boolean {
+  const skillSignals = profile.programming_languages.length + profile.frameworks.length + profile.cloud_devops.length + profile.databases.length;
+  return Boolean(profile.title) || profile.years_experience !== null || skillSignals >= 2;
 }
 
 export async function parseCandidateProfile(context: ParseContext): Promise<CandidateProfileResult> {
@@ -327,22 +484,27 @@ export async function parseCandidateProfile(context: ParseContext): Promise<Cand
     };
   }
 
-  const deterministic = deterministicProfile(context.sectionedText || normalized);
+  const baseText = context.sectionedText || normalized;
+  const deterministic = deterministicProfile(baseText);
   let profile = deterministic;
-  let usedAi = false;
+  let strategy: ParseStrategy = "deterministic_fallback";
 
-  const yearsSignal = inferYearsFromSignals(context.sectionedText || normalized);
+  const yearsSignal = inferYearsFromSignals(baseText);
   console.info("[candidate-profile] years_experience signal", { years: yearsSignal.years, rationale: yearsSignal.rationale });
 
   try {
-    const aiProfile = await parseWithAI(context.sectionedText || normalized);
+    const aiProfile = await parseWithAI(baseText);
     if (aiProfile) {
-      usedAi = true;
+      strategy = "openai";
       profile = {
         ...deterministic,
-        ...aiProfile,
+        ...toCandidateProfile(aiProfile),
       };
-      console.info("[candidate-profile] ai parse success", { title: aiProfile.title, years: aiProfile.years_experience });
+      console.info("[candidate-profile] ai parse success", {
+        title: aiProfile.title,
+        years: aiProfile.years_experience,
+        notes: aiProfile.extraction_notes.slice(0, 3),
+      });
     } else if (env.OPENAI_API_KEY) {
       console.warn("[candidate-profile] ai parse unavailable, deterministic fallback used");
     }
@@ -356,15 +518,25 @@ export async function parseCandidateProfile(context: ParseContext): Promise<Cand
     profile.years_experience = yearsSignal.years;
   }
 
+  if (!hasMinimumUsableSignal(profile)) {
+    return {
+      ok: false,
+      error: {
+        code: "CANDIDATE_PROFILE_LOW_QUALITY",
+        message: "Unable to build a usable candidate profile from the uploaded CV text.",
+      },
+    };
+  }
+
   const completenessScore = scoreCompleteness(profile);
-  const confidenceScore = scoreConfidence(profile, context, usedAi);
+  const confidenceScore = scoreConfidence(profile, context, strategy);
 
   console.info("[candidate-profile] scoring rationale", {
     completenessScore,
     confidenceScore,
     extractionQuality: context.extractionQuality,
     classificationConfidence: context.classification.confidence,
-    usedAi,
+    strategy,
   });
 
   return {
