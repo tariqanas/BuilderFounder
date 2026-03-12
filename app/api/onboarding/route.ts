@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase";
-import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
+import { extractPdfText, isE164Phone, isNonEmptyString, toInt, validateExtractedCvText } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 import { upsertCandidateProfile } from "@/lib/candidate-profile";
 
@@ -52,6 +52,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please review your criteria and contact details." }, { status: 400 });
   }
 
+  let extractedText = "";
+  try {
+    extractedText = await extractPdfText(fileBuffer);
+  } catch (error) {
+    console.error("[onboarding] cv extraction failed", { userId: user.id, error });
+    return NextResponse.json(
+      {
+        error: "We could not read text from your PDF CV. Please upload a readable French or English resume.",
+        code: "CV_EXTRACTION_FAILED",
+      },
+      { status: 400 }
+    );
+  }
+
+  const cvValidation = validateExtractedCvText(extractedText);
+  if (!cvValidation.ok) {
+    console.warn("[onboarding] cv validation failed", { userId: user.id, ...cvValidation });
+    return NextResponse.json(
+      {
+        error: cvValidation.message,
+        code: cvValidation.code,
+        details: cvValidation.details,
+      },
+      { status: 400 }
+    );
+  }
+
   const storagePath = `cv/${user.id}/cv.pdf`;
   const { error: storageError } = await supabase.storage.from("cv").upload(storagePath, fileBuffer, {
     upsert: true,
@@ -62,9 +89,6 @@ export async function POST(request: Request) {
     console.error("[upload] cv storage failed");
     return NextResponse.json({ error: "Upload failed. Please retry." }, { status: 500 });
   }
-
-  const extractedText = extractPdfText(fileBuffer);
-  const emptyText = !extractedText.length;
 
   const { error: settingsError } = await supabase.from("user_settings").upsert(
     {
@@ -98,7 +122,7 @@ export async function POST(request: Request) {
     {
       user_id: user.id,
       storage_path: storagePath,
-      extracted_text: extractedText,
+      extracted_text: cvValidation.normalizedText,
     },
     { onConflict: "user_id" }
     )
@@ -113,7 +137,7 @@ export async function POST(request: Request) {
   const profileResult = await upsertCandidateProfile({
     userId: user.id,
     cvFileId: cvRow?.id ?? null,
-    extractedText,
+    extractedText: cvValidation.normalizedText,
   });
 
   if (!profileResult.ok) {
@@ -126,7 +150,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    notice: emptyText ? "cv-empty-text" : "onboarding-activated",
+    notice: "onboarding-activated",
     candidateProfile: profileResult.ok
       ? {
           status: "ready",
