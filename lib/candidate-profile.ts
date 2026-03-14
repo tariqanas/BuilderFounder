@@ -40,58 +40,9 @@ type ParseContext = {
   openAiExtraction?: OpenAiCvExtractionInput;
 };
 
-const LANGUAGE_SYNONYMS: Record<string, string> = {
-  fr: "French",
-  francais: "French",
-  "français": "French",
-  french: "French",
-  en: "English",
-  english: "English",
-  anglais: "English",
-  spanish: "Spanish",
-  espagnol: "Spanish",
-  german: "German",
-  allemand: "German",
-  italian: "Italian",
-  arabe: "Arabic",
-  arabic: "Arabic",
-};
-
-const DOMAIN_SYNONYMS: Record<string, string> = {
-  fintech: "Fintech",
-  "financial services": "Finance",
-  finance: "Finance",
-  banking: "Banking",
-  banque: "Banking",
-  insurance: "Insurance",
-  assurance: "Insurance",
-  healthcare: "Healthcare",
-  sante: "Healthcare",
-  "santé": "Healthcare",
-  retail: "Retail",
-  ecommerce: "E-commerce",
-  "e-commerce": "E-commerce",
-  telecom: "Telecom",
-  saas: "SaaS",
-  industry: "Industry",
-  industrie: "Industry",
-  automotive: "Automotive",
-  "public sector": "Public Sector",
-};
-
-const SENIORITY_SYNONYMS: Record<string, string> = {
-  junior: "junior",
-  jr: "junior",
-  mid: "mid",
-  intermediate: "mid",
-  confirmed: "mid",
-  "confirmé": "mid",
-  senior: "senior",
-  "sénior": "senior",
-  lead: "lead",
-  staff: "staff",
-  principal: "principal",
-};
+const GENERIC_DOMAIN_LABELS = new Set(["information technology", "software", "tech", "engineering"]);
+const GENERIC_PRIMARY_STACK_LABELS = new Set(["full stack development", "devops", "web development", "project management"]);
+const GENERIC_SUMMARY_SNIPPETS = [/^experienced professional\.?$/i, /^software engineer\.?$/i, /^developer\.?$/i, /^it professional\.?$/i];
 
 function normalizeText(text: string): string {
   return text.replace(/\r/g, "\n").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 80000);
@@ -101,22 +52,24 @@ function uniq(items: string[]): string[] {
   return [...new Set(items.map((x) => x.trim()).filter(Boolean))];
 }
 
-function tokenizeList(values: string[]): string[] {
-  return values.flatMap((value) => value.split(/[;,]|\band\b|\bet\b|\//i).map((v) => v.trim())).filter(Boolean);
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function splitListValue(value: string): string[] {
+  return value
+    .split(/[;,\n]+/)
+    .map((part) => normalizeWhitespace(part.replace(/^[•\-–*]+\s*/, "")))
+    .filter(Boolean);
 }
 
 function normalizeLanguages(values: string[]): string[] {
-  return uniq(tokenizeList(values).map((value) => LANGUAGE_SYNONYMS[value.toLowerCase().trim()] ?? value.trim())).slice(0, 10);
-}
-
-function normalizeDomains(values: string[]): string[] {
-  return uniq(tokenizeList(values).map((value) => DOMAIN_SYNONYMS[value.toLowerCase().trim()] ?? value.trim())).slice(0, 15);
+  return normalizeList(values, 10);
 }
 
 function normalizeSeniority(value: string | null): string | null {
   if (!value) return null;
-  const key = value.toLowerCase().trim();
-  return SENIORITY_SYNONYMS[key] ?? (key.includes("senior") ? "senior" : key.includes("lead") ? "lead" : key || null);
+  return normalizeWhitespace(value).slice(0, 40) || null;
 }
 
 function normalizeRemote(remote: string): CandidateRemotePreference {
@@ -128,7 +81,34 @@ function normalizeRemote(remote: string): CandidateRemotePreference {
 }
 
 function normalizeList(values: string[], limit: number): string[] {
-  return uniq(tokenizeList(values)).slice(0, limit);
+  return uniq(values.flatMap(splitListValue)).slice(0, limit);
+}
+
+function normalizeDomains(values: string[]): string[] {
+  return normalizeList(values, 15).filter((value) => !GENERIC_DOMAIN_LABELS.has(value.toLowerCase()));
+}
+
+function normalizePrimaryStack(values: string[]): string[] {
+  return normalizeList(values, 8).filter((value) => !GENERIC_PRIMARY_STACK_LABELS.has(value.toLowerCase()));
+}
+
+function isSummaryTruncated(value: string): boolean {
+  return /\.{3,}$/.test(value) || /[,:;\-]\s*$/.test(value);
+}
+
+function isSummaryGeneric(value: string): boolean {
+  return GENERIC_SUMMARY_SNIPPETS.some((pattern) => pattern.test(value));
+}
+
+function buildSummaryFallback(profile: CandidateProfile): string {
+  const headlineBits = [profile.title, profile.seniority].filter(Boolean).join(" • ");
+  const experience = profile.years_experience !== null ? `${profile.years_experience}+ years of experience` : "";
+  const stack = profile.primary_stack[0] ? `focused on ${profile.primary_stack[0]}` : "";
+  const domain = profile.domains[0] ? `with strong exposure to ${profile.domains[0]}` : "";
+
+  const sentenceOne = [headlineBits, experience, stack].filter(Boolean).join(", ");
+  const sentenceTwo = domain ? `${domain}.` : "";
+  return normalizeWhitespace(`${sentenceOne}${sentenceOne ? ". " : ""}${sentenceTwo}`).slice(0, 280);
 }
 
 function buildProfileFromOpenAiExtraction(extraction: OpenAiCvExtractionInput): CandidateProfile {
@@ -156,7 +136,7 @@ function normalizeProfile(profile: CandidateProfile): CandidateProfile {
     title: profile.title?.trim() ?? null,
     seniority: normalizeSeniority(profile.seniority),
     years_experience: profile.years_experience !== null ? Math.max(0, Math.min(50, Math.round(profile.years_experience))) : null,
-    primary_stack: normalizeList(profile.primary_stack, 8),
+    primary_stack: normalizePrimaryStack(profile.primary_stack),
     programming_languages: normalizeList(profile.programming_languages, 40),
     frameworks: normalizeList(profile.frameworks, 40),
     cloud_devops: normalizeList(profile.cloud_devops, 40),
@@ -166,7 +146,13 @@ function normalizeProfile(profile: CandidateProfile): CandidateProfile {
     spoken_languages: normalizeLanguages(profile.spoken_languages),
     management_signals: normalizeList(profile.management_signals, 20),
     remote_preference: normalizeRemote(profile.remote_preference),
-    short_summary: profile.short_summary.trim().slice(0, 280),
+    short_summary: (() => {
+      const summary = normalizeWhitespace(profile.short_summary).slice(0, 280);
+      if (!summary || isSummaryTruncated(summary) || isSummaryGeneric(summary)) {
+        return buildSummaryFallback(profile);
+      }
+      return summary;
+    })(),
   };
 }
 
