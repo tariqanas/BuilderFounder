@@ -386,6 +386,12 @@ export async function runMatchingEngine() {
   const service = createSupabaseServiceClient();
   const runStarted = Date.now();
 
+  const { error: missionMatchesHealthError } = await service.from("mission_matches").select("id", { head: true, count: "exact" }).limit(1);
+  if (missionMatchesHealthError) {
+    console.error(`[matching] mission_matches_health_check_failed error=${JSON.stringify(missionMatchesHealthError)}`);
+    throw new Error(`matching_mission_matches_unavailable code=${missionMatchesHealthError.code ?? "n/a"}`);
+  }
+
   const configuredAiCap = env.MAX_AI_CALLS_PER_RUN || DEFAULT_MAX_AI_CALLS_PER_RUN;
   const aiBudget: AIBudget = {
     maxCalls: Number.isFinite(configuredAiCap) && configuredAiCap > 0 ? Math.floor(configuredAiCap) : DEFAULT_MAX_AI_CALLS_PER_RUN,
@@ -402,6 +408,7 @@ export async function runMatchingEngine() {
   if (subError) throw new Error("matching_subscriptions_failed");
 
   const eligibleUserIds = (activeSubs ?? []).map((sub) => sub.user_id);
+  console.log(`[matching] active_or_trialing_users count=${eligibleUserIds.length}`);
   if (!eligibleUserIds.length) {
     return { users: 0, createdMissions: 0, queuedNotifications: 0, aiCalls: 0, aiEstimatedTokens: 0 };
   }
@@ -417,6 +424,7 @@ export async function runMatchingEngine() {
 
   const runUsers = ((users ?? []) as UserSettingsRow[]);
   const scopedUsers = simulateUsers > 0 ? runUsers.slice(0, Math.max(0, Math.floor(simulateUsers))) : runUsers;
+  console.log(`[matching] radar_enabled_eligible_users count=${scopedUsers.length} simulate_users=${simulateUsers}`);
 
   const { data: profiles } = await service.from("profiles").select("user_id, email").in(
     "user_id",
@@ -607,7 +615,21 @@ export async function runMatchingEngine() {
         .select("id")
         .maybeSingle();
 
-      if (missionError || !insertedMission) continue;
+      if (missionError || !insertedMission) {
+        console.error(
+          `[matching] mission_insert_failed user_id=${user.user_id} offer_hash=${mission.offer.hash} error=${missionError ? JSON.stringify(missionError) : "null"}`
+        );
+        continue;
+      }
+
+      console.log(
+        `[matching] mission_inserted user_id=${user.user_id} mission_id=${insertedMission.id} score=${mission.score} reasons=${JSON.stringify(
+          mission.reasons
+            .split("|")
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+        )}`
+      );
 
       await upsertMissionMatch({
         userId: user.user_id,
