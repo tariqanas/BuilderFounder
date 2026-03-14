@@ -45,11 +45,11 @@ export async function POST(request: Request) {
   const allowedRemote = remotePreference === "remote" || remotePreference === "hybrid" || remotePreference === "onsite";
 
   if (
-    !isNonEmptyString(primaryStack, 120) ||
+    (primaryStack && !isNonEmptyString(primaryStack, 120)) ||
     (secondaryStack && !isNonEmptyString(secondaryStack, 120)) ||
     minDayRateInt === null ||
     !allowedRemote ||
-    !isNonEmptyString(countries, 100) ||
+    (countries && !isNonEmptyString(countries, 100)) ||
     (notifyWhatsapp && !isE164Phone(whatsappNumber)) ||
     (notifySms && !isE164Phone(smsNumber)) ||
     (!notifyWhatsapp && whatsappNumber && String(whatsappNumber).trim().length > 0 && !isE164Phone(whatsappNumber)) ||
@@ -153,14 +153,17 @@ export async function POST(request: Request) {
   const { error: settingsError } = await supabase.from("user_settings").upsert(
     {
       user_id: user.id,
-      primary_stack: primaryStack,
-      secondary_stack: secondaryStack || null,
+      primary_stack: isNonEmptyString(primaryStack, 120) ? String(primaryStack).trim() : null,
+      secondary_stack: isNonEmptyString(secondaryStack, 120) ? String(secondaryStack).trim() : null,
       min_day_rate: minDayRateInt,
       remote_preference: remotePreference,
-      countries: String(countries)
-        .split(",")
-        .map((country) => country.trim())
-        .filter(Boolean),
+      countries: (() => {
+        const parsed = String(countries ?? "")
+          .split(",")
+          .map((country) => country.trim())
+          .filter(Boolean);
+        return parsed.length ? parsed : null;
+      })(),
       notify_email: notifyEmail,
       notify_whatsapp: notifyWhatsapp,
       whatsapp_number: notifyWhatsapp ? String(whatsappNumber) : null,
