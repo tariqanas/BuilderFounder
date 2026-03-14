@@ -3,6 +3,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase";
 import { buildMissionEmail } from "@/lib/notification-template";
 import { buildFallbackPitch, cleanMissionText, toMissionReasons } from "@/lib/mission-utils";
 import { resolveMatchScoreThreshold } from "@/lib/matching-config";
+import { upsertMissionMatch } from "@/lib/mission-matching-v1";
 
 type UserSettingsRow = {
   user_id: string;
@@ -26,6 +27,9 @@ type CandidateProfileSnapshot = {
   cloud_devops: string[];
   databases: string[];
   ai_data_skills: string[];
+  domains: string[];
+  years_experience: number | null;
+  seniority: string | null;
 };
 
 type OfferRow = {
@@ -604,6 +608,29 @@ export async function runMatchingEngine() {
         .maybeSingle();
 
       if (missionError || !insertedMission) continue;
+
+      await upsertMissionMatch({
+        userId: user.user_id,
+        missionId: insertedMission.id,
+        mission: {
+          id: insertedMission.id,
+          title: mission.offer.title,
+          company: mission.offer.company,
+          country: mission.offer.country,
+          remote: mission.offer.remote,
+          day_rate: mission.offer.day_rate,
+          description: mission.offer.description,
+        },
+        settings: {
+          primary_stack: user.primary_stack,
+          secondary_stack: user.secondary_stack,
+          min_day_rate: user.min_day_rate,
+          remote_preference: user.remote_preference,
+          countries: user.countries,
+        },
+        candidateProfile,
+      });
+
       createdMissions += 1;
 
       await service
