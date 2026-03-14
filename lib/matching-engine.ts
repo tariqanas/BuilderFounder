@@ -6,7 +6,7 @@ import { resolveMatchScoreThreshold } from "@/lib/matching-config";
 
 type UserSettingsRow = {
   user_id: string;
-  primary_stack: string;
+  primary_stack: string | null;
   secondary_stack: string | null;
   min_day_rate: number | null;
   remote_preference: string | null;
@@ -16,6 +16,16 @@ type UserSettingsRow = {
   whatsapp_number: string | null;
   notify_sms: boolean;
   sms_number: string | null;
+};
+
+type CandidateProfileSnapshot = {
+  primary_stack: string[];
+  remote_preference: "remote" | "hybrid" | "onsite" | "unknown";
+  programming_languages: string[];
+  frameworks: string[];
+  cloud_devops: string[];
+  databases: string[];
+  ai_data_skills: string[];
 };
 
 type OfferRow = {
@@ -132,13 +142,32 @@ function dayRateMatch(offerDayRate: number | null, minDayRate: number | null) {
   return Number(offerDayRate) >= Number(minDayRate);
 }
 
-function deterministicPreFilter(user: UserSettingsRow, offerPool: OfferRow[]) {
+function nonEmpty(value: string | null | undefined) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function resolvePrimaryStacks(user: UserSettingsRow, candidateProfile: CandidateProfileSnapshot | null) {
+  const settingsStacks = [user.primary_stack, user.secondary_stack].filter(nonEmpty).map((stack) => String(stack).trim());
+  const cvStacks = (candidateProfile?.primary_stack ?? []).filter(nonEmpty).map((stack) => String(stack).trim());
+  return [...new Set([...settingsStacks, ...cvStacks])];
+}
+
+function resolveSearchRemotePreference(user: UserSettingsRow, candidateProfile: CandidateProfileSnapshot | null) {
+  if (nonEmpty(user.remote_preference)) return user.remote_preference;
+  if (candidateProfile && candidateProfile.remote_preference !== "unknown") return candidateProfile.remote_preference;
+  return null;
+}
+
+function deterministicPreFilter(user: UserSettingsRow, offerPool: OfferRow[], candidateProfile: CandidateProfileSnapshot | null) {
   // Layer 1: deterministic filter only, no AI calls.
   const searchCorpus = (offer: OfferRow) => `${offer.title} ${offer.description ?? ""}`;
+  const stacks = resolvePrimaryStacks(user, candidateProfile);
+  const remotePreference = resolveSearchRemotePreference(user, candidateProfile);
+
   return offerPool
     .filter((offer) => countryMatch(offer.country, user.countries ?? []))
-    .filter((offer) => remoteMatch(offer.remote, user.remote_preference))
-    .filter((offer) => textContains(searchCorpus(offer), user.primary_stack))
+    .filter((offer) => remoteMatch(offer.remote, remotePreference))
+    .filter((offer) => (stacks.length ? stacks.some((stack) => textContains(searchCorpus(offer), stack)) : true))
     .filter((offer) => dayRateMatch(offer.day_rate, user.min_day_rate));
 }
 
@@ -196,6 +225,7 @@ async function scoreWithOpenAI(
   offer: OfferRow,
   stacks: string[],
   user: UserSettingsRow,
+  candidateProfile: CandidateProfileSnapshot | null,
   cvText: string | null,
   budget: AIBudget
 ): Promise<ScoreResult | null> {
@@ -206,12 +236,13 @@ async function scoreWithOpenAI(
   const content = cleanDescription(offer.description);
   const promptBody = {
     user_preferences: {
-      primary_stack: user.primary_stack,
-      secondary_stack: user.secondary_stack,
+      additional_primary_stack: user.primary_stack,
+      additional_secondary_stack: user.secondary_stack,
       min_day_rate: user.min_day_rate,
-      remote_preference: user.remote_preference,
+      preferred_work_mode: user.remote_preference,
       countries: user.countries ?? [],
     },
+    candidate_profile: candidateProfile,
     profile_context: {
       extracted_cv_text: cvText,
     },
@@ -331,7 +362,7 @@ async function makePitchWithOpenAI(
   return parsePitchJson(payload.output_text);
 }
 
-function makePitchFallback(offer: OfferRow, reasons: string[], user: UserSettingsRow) {
+function makePitchFallback(offer: OfferRow, reasons: string[], user: UserSettingsRow, candidateProfile: CandidateProfileSnapshot | null) {
   const cleanTitle = cleanMissionText(offer.title, "mission");
   const cleanCompany = cleanMissionText(offer.company, "company");
   const reasonList = reasons.length ? reasons : toMissionReasons(offer.description);
@@ -341,7 +372,7 @@ function makePitchFallback(offer: OfferRow, reasons: string[], user: UserSetting
       title: cleanTitle,
       company: cleanCompany,
       reasons: reasonList,
-      primaryStack: user.primary_stack,
+      primaryStack: user.primary_stack ?? candidateProfile?.primary_stack?.[0] ?? "",
       secondaryStack: user.secondary_stack,
     }),
   };
@@ -405,6 +436,21 @@ export async function runMatchingEngine() {
     if (text) cvByUserId.set(row.user_id, text);
   }
 
+  const { data: candidateProfileRows } = await service
+    .from("candidate_profiles")
+    .select("user_id, profile_json")
+    .in(
+      "user_id",
+      scopedUsers.map((u) => u.user_id)
+    );
+
+  const candidateProfileByUserId = new Map<string, CandidateProfileSnapshot>();
+  for (const row of candidateProfileRows ?? []) {
+    const raw = (row as { user_id: string; profile_json: CandidateProfileSnapshot | null }).profile_json;
+    if (!raw) continue;
+    candidateProfileByUserId.set((row as { user_id: string }).user_id, raw);
+  }
+
   const { data: offerPool, error: offerError } = await service
     .from("offers_raw")
     .select("source, title, company, country, remote, day_rate, url, description, hash")
@@ -423,8 +469,9 @@ export async function runMatchingEngine() {
       break;
     }
 
-    const stacks = [user.primary_stack, user.secondary_stack].filter(Boolean) as string[];
-    const preFiltered = deterministicPreFilter(user, (offerPool ?? []) as OfferRow[]);
+    const candidateProfile = candidateProfileByUserId.get(user.user_id) ?? null;
+    const stacks = resolvePrimaryStacks(user, candidateProfile);
+    const preFiltered = deterministicPreFilter(user, (offerPool ?? []) as OfferRow[], candidateProfile);
     const candidates = preFiltered.slice(0, Math.min(MAX_OFFERS_PER_USER, remainingGlobalCap));
     remainingGlobalCap -= candidates.length;
 
@@ -480,7 +527,7 @@ export async function runMatchingEngine() {
         break;
       }
 
-      const aiScore = await scoreWithOpenAI(offer, stacks, user, cvText, aiBudget);
+      const aiScore = await scoreWithOpenAI(offer, stacks, user, candidateProfile, cvText, aiBudget);
       if (aiBudget.currentCalls > aiBudget.maxCalls) {
         console.warn("[matching] ai_budget_exceeded_hard_stop");
         break;
@@ -492,7 +539,7 @@ export async function runMatchingEngine() {
       const finalScore = aiScore;
 
       const aiPitch = await makePitchWithOpenAI(offer, finalScore, user, cvText, aiBudget);
-      const pitch = aiPitch ?? makePitchFallback(offer, finalScore.reasons, user);
+      const pitch = aiPitch ?? makePitchFallback(offer, finalScore.reasons, user, candidateProfile);
       await service.from("user_offer_scores").upsert(
         {
           user_id: user.user_id,
