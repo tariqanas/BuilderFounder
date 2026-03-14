@@ -31,6 +31,7 @@ export type CandidateProfileRecord = {
 };
 
 export type CandidateProfileErrorCode =
+  | "CV_AI_EXTRACTION_FAILED"
   | "CANDIDATE_PROFILE_EMPTY_TEXT"
   | "CANDIDATE_PROFILE_LOW_QUALITY"
   | "CANDIDATE_PROFILE_PERSIST_FAILED"

@@ -225,7 +225,12 @@ function isStructuredExtraction(value: unknown): value is CvStructuredExtraction
 }
 
 export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "cv.pdf"): Promise<CvStructuredExtraction | null> {
-  if (!env.OPENAI_API_KEY) return null;
+  if (!env.OPENAI_API_KEY) {
+    console.error("[cv-intelligence] OpenAI extraction failed: missing OPENAI_API_KEY");
+    return null;
+  }
+
+  console.info("[cv-intelligence] OpenAI request start", { filename, size: pdfBuffer.length, model: env.OPENAI_MODEL });
 
   const form = new FormData();
   form.append("purpose", "user_data");
@@ -237,10 +242,14 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
     body: form,
   });
 
+  console.info("[cv-intelligence] OpenAI file upload status", { status: uploadResponse.status, ok: uploadResponse.ok });
   if (!uploadResponse.ok) return null;
   const uploaded = (await uploadResponse.json()) as { id?: string };
   const fileId = uploaded.id;
-  if (!fileId) return null;
+  if (!fileId) {
+    console.error("[cv-intelligence] OpenAI extraction failed: missing uploaded file id");
+    return null;
+  }
 
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -255,7 +264,7 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
           {
             role: "system",
             content:
-              "You are a strict CV/resume intelligence engine for technical hiring. Read the full attached PDF directly. First decide if this is a usable professional CV/resume. If not, set is_cv=false and provide rejection_reason. If usable, infer the real candidate profile semantically from the document content. Support French, English, and mixed CVs. Prefer null over hallucination and keep category boundaries strict (programming languages vs frameworks vs cloud/devops vs databases vs AI/data).",
+              "You are the single source of truth CV extraction engine for technical hiring. Read EVERY page of the attached PDF and use the FULL CV content, not only a dedicated skills section. Extract technologies from work experience bullet points, mission descriptions, project details, and responsibilities. Support French, English, and mixed CVs.\n\nCategory boundaries are strict:\n- programming_languages: Java, JavaScript, TypeScript, Python, Shell, SQL, HTML, CSS, etc.\n- frameworks: Spring Boot, Angular, React, Node.js, RabbitMQ, Kafka, REST, Hibernate, etc.\n- cloud_devops: Docker, Kubernetes, Helm, Jenkins, GitLab CI, Bamboo, Terraform, Grafana, Kibana, Splunk, Portainer, Dynatrace, Sonar, Maven, etc.\n- databases: MongoDB, Oracle, PostgreSQL, MySQL, Redis, SQL Server, etc.\n\nExtraction rules:\n- seniority: infer from titles and responsibilities (e.g. Technical Leader or Ingénieur sénior => senior).\n- management_signals: detect role evidence such as responsable, encadrement, pilotage, team lead, tech lead, coordination, mentoring, management.\n- domains: infer from employers, sectors, project context, and client names, never from hobbies/interests.\n- primary_stack: synthesize 2-4 meaningful stack clusters grounded in CV evidence.\n- short_summary: write 2-3 specific sentences grounded in the CV, no generic filler.\n- prefer null over hallucination when evidence is missing.\n- extract from work history, not only the profile headline.\n\nIf the document is not a usable professional CV/resume, return is_cv=false and a rejection_reason.",
           },
           {
             role: "user",
@@ -264,7 +273,7 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
               {
                 type: "input_text",
                 text:
-                  "Return strict JSON only. Determine: is_cv, language, extraction_quality, and the full candidate profile. Title must reflect dominant positioning. Years_experience: explicit mention first, chronology second. Domains must come from professional experience, not hobbies. management_signals must be inferred from role/responsibility evidence. short_summary must be specific and grounded. text_excerpt should contain compact resume text (max 2500 chars) to support downstream matching.",
+                  "Return strict JSON only following the schema. text_excerpt must include the most relevant extracted CV evidence and stay within 4000 characters.",
               },
             ],
           },
@@ -277,23 +286,31 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
             schema: CV_EXTRACTION_SCHEMA,
           },
         },
-        max_output_tokens: 2600,
+        max_output_tokens: 3000,
       }),
     });
 
+    console.info("[cv-intelligence] OpenAI response status", { status: response.status, ok: response.ok });
     if (!response.ok) return null;
     const payload = (await response.json()) as { output_text?: string };
     if (!payload.output_text) return null;
 
     const parsed = parseJson<unknown>(payload.output_text);
-    if (!isStructuredExtraction(parsed)) return null;
+    if (!isStructuredExtraction(parsed)) {
+      console.error("[cv-intelligence] OpenAI schema validation failed", { parsed });
+      return null;
+    }
+    console.info("[cv-intelligence] raw OpenAI extraction", parsed);
     return {
       ...parsed,
       extraction_quality: Number(Math.max(0, Math.min(1, parsed.extraction_quality)).toFixed(3)),
-      text_excerpt: parsed.text_excerpt.slice(0, 2500),
+      text_excerpt: parsed.text_excerpt.slice(0, 4000),
       short_summary: parsed.short_summary.slice(0, 220),
       rejection_reason: parsed.rejection_reason?.slice(0, 400) ?? null,
     };
+  } catch (error) {
+    console.error("[cv-intelligence] OpenAI extraction failure reason", { error });
+    return null;
   } finally {
     await fetch(`https://api.openai.com/v1/files/${fileId}`, {
       method: "DELETE",

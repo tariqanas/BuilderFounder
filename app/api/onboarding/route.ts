@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase";
-import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
+import { isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 import { upsertCandidateProfile } from "@/lib/candidate-profile";
 import {
-  classifyCvText,
   extractCvFromPdfWithOpenAI,
   preprocessCvText,
   type CvClassification,
@@ -63,46 +62,30 @@ export async function POST(request: Request) {
   try {
     openAiExtraction = await extractCvFromPdfWithOpenAI(fileBuffer, file.name || "cv.pdf");
   } catch (error) {
-    console.error("[onboarding] openai cv extraction failed", { userId: user.id, error });
+    console.error("[onboarding] OpenAI extraction failed", { userId: user.id, error });
   }
 
-  let preprocessedCv: CvPreprocessResult;
-  let cvClassification: CvClassification;
-  let strategy: "openai_pdf" | "text_fallback" = "openai_pdf";
-
-  if (openAiExtraction) {
-    preprocessedCv = preprocessCvText(openAiExtraction.text_excerpt);
-    cvClassification = {
-      is_cv: openAiExtraction.is_cv,
-      language: openAiExtraction.language,
-      confidence: openAiExtraction.extraction_quality,
-      reason: openAiExtraction.is_cv
-        ? "Validated by OpenAI full-document CV classification."
-        : openAiExtraction.rejection_reason || "OpenAI determined the PDF is not a usable CV/resume.",
-      deterministicSignals: [],
-    };
-  } else {
-    strategy = "text_fallback";
-    let extractedText = "";
-    try {
-      extractedText = await extractPdfText(fileBuffer);
-    } catch (error) {
-      console.error("[onboarding] fallback cv extraction failed", { userId: user.id, error });
-    }
-
-    preprocessedCv = preprocessCvText(extractedText);
-    if (!preprocessedCv.normalizedText) {
-      return NextResponse.json(
-        {
-          error: "We could not analyze your PDF at the moment. Please retry in a few seconds.",
-          code: "CV_AI_EXTRACTION_UNAVAILABLE",
-        },
-        { status: 503 }
-      );
-    }
-
-    cvClassification = await classifyCvText(preprocessedCv.sectionedText || preprocessedCv.normalizedText, preprocessedCv.extractionQuality);
+  if (!openAiExtraction) {
+    return NextResponse.json(
+      {
+        error: "An incident occurred while analyzing your CV. Please try again later.",
+        code: "CV_AI_EXTRACTION_FAILED",
+      },
+      { status: 503 }
+    );
   }
+
+  const preprocessedCv: CvPreprocessResult = preprocessCvText(openAiExtraction.text_excerpt);
+  const cvClassification: CvClassification = {
+    is_cv: openAiExtraction.is_cv,
+    language: openAiExtraction.language,
+    confidence: openAiExtraction.extraction_quality,
+    reason: openAiExtraction.is_cv
+      ? "Validated by OpenAI full-document CV classification."
+      : openAiExtraction.rejection_reason || "OpenAI determined the PDF is not a usable CV/resume.",
+    deterministicSignals: [],
+  };
+  const strategy = "openai_pdf" as const;
 
   console.info("[onboarding] extraction quality", {
     userId: user.id,
@@ -234,20 +217,23 @@ export async function POST(request: Request) {
       code: profileResult.error.code,
       message: profileResult.error.message,
     });
+    return NextResponse.json(
+      {
+        error: "An incident occurred while analyzing your CV. Please try again later.",
+        code: "CV_AI_EXTRACTION_FAILED",
+        details: profileResult.error,
+      },
+      { status: 503 }
+    );
   }
 
   return NextResponse.json({
     ok: true,
     notice: "onboarding-activated",
-    candidateProfile: profileResult.ok
-      ? {
-          status: "ready",
-          completeness_score: profileResult.completenessScore,
-          confidence_score: profileResult.confidenceScore,
-        }
-      : {
-          status: "failed",
-          error: profileResult.error,
-        },
+    candidateProfile: {
+      status: "ready",
+      completeness_score: profileResult.completenessScore,
+      confidence_score: profileResult.confidenceScore,
+    },
   });
 }
