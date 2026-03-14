@@ -61,11 +61,20 @@ export async function POST(request: Request) {
   let openAiExtraction = null;
   try {
     openAiExtraction = await extractCvFromPdfWithOpenAI(fileBuffer, file.name || "cv.pdf");
+    console.info("[onboarding] openAiExtraction:", {
+      userId: user.id,
+      openAiExtraction,
+    });
   } catch (error) {
-    console.error("[onboarding] OpenAI extraction failed", { userId: user.id, error });
+    console.error("[onboarding] caught error:", { stage: "extractCvFromPdfWithOpenAI", userId: user.id, error });
   }
 
   if (!openAiExtraction) {
+    console.error("[onboarding] returning 503 because ...", {
+      stage: "openAiExtraction",
+      reason: "extractCvFromPdfWithOpenAI returned null",
+      userId: user.id,
+    });
     return NextResponse.json(
       {
         error: "An incident occurred while analyzing your CV. Please try again later.",
@@ -86,6 +95,11 @@ export async function POST(request: Request) {
     deterministicSignals: [],
   };
   const strategy = "openai_pdf" as const;
+
+  console.info("[onboarding] classification:", {
+    userId: user.id,
+    classification: cvClassification,
+  });
 
   console.info("[onboarding] extraction quality", {
     userId: user.id,
@@ -211,11 +225,22 @@ export async function POST(request: Request) {
       : undefined,
   });
 
+  console.info("[onboarding] candidateProfileResult:", {
+    userId: user.id,
+    candidateProfileResult: profileResult,
+  });
+
   if (!profileResult.ok) {
     console.error("[upload] candidate profile parsing failed", {
       userId: user.id,
       code: profileResult.error.code,
       message: profileResult.error.message,
+    });
+    console.error("[onboarding] returning 503 because ...", {
+      stage: "upsertCandidateProfile",
+      reason: "candidate profile parsing failed",
+      userId: user.id,
+      profileError: profileResult.error,
     });
     return NextResponse.json(
       {
