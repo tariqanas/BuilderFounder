@@ -161,6 +161,47 @@ function truncateForLog(value: string, maxLength = 1600): string {
   return `${value.slice(0, maxLength)}... [truncated ${value.length - maxLength} chars]`;
 }
 
+function extractResponseTextFromPayload(payload: unknown): { text: string; path: string } | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const root = payload as Record<string, unknown>;
+
+  if (typeof root.output_text === "string" && root.output_text.trim()) {
+    return { text: root.output_text, path: "output_text" };
+  }
+
+  if (typeof root.text === "string" && root.text.trim()) {
+    return { text: root.text, path: "text" };
+  }
+
+  if (Array.isArray(root.output)) {
+    for (let outputIndex = 0; outputIndex < root.output.length; outputIndex += 1) {
+      const outputItem = root.output[outputIndex];
+      if (!outputItem || typeof outputItem !== "object") continue;
+      const outputRecord = outputItem as Record<string, unknown>;
+
+      if (typeof outputRecord.text === "string" && outputRecord.text.trim()) {
+        return { text: outputRecord.text, path: `output[${outputIndex}].text` };
+      }
+
+      if (!Array.isArray(outputRecord.content)) continue;
+      for (let contentIndex = 0; contentIndex < outputRecord.content.length; contentIndex += 1) {
+        const contentItem = outputRecord.content[contentIndex];
+        if (!contentItem || typeof contentItem !== "object") continue;
+        const contentRecord = contentItem as Record<string, unknown>;
+        if (typeof contentRecord.text === "string" && contentRecord.text.trim()) {
+          return {
+            text: contentRecord.text,
+            path: `output[${outputIndex}].content[${contentIndex}].text`,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 const CV_EXTRACTION_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -297,24 +338,27 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
 
     console.info("[cv-intelligence] OpenAI response status", { status: response.status, ok: response.ok });
     if (!response.ok) return null;
-    const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) {
-      console.error("[cv-intelligence] Missing output_text", {
-        payloadKeys: Object.keys(payload ?? {}),
+    const payload = (await response.json()) as unknown;
+    const extractedOutput = extractResponseTextFromPayload(payload);
+    if (!extractedOutput) {
+      console.error("[cv-intelligence] Missing extractable OpenAI response text", {
+        payloadKeys: payload && typeof payload === "object" ? Object.keys(payload as Record<string, unknown>) : [],
         openAiResponseOk: response.ok,
       });
       console.error("[cv-intelligence] OpenAI returned a valid HTTP response but invalid structured payload", {
-        reason: "missing_output_text",
+        reason: "missing_model_output_text",
       });
       return null;
     }
 
-    console.info("[cv-intelligence] OpenAI raw output_text:", truncateForLog(payload.output_text));
+    console.info("[cv-intelligence] OpenAI output extracted", { path: extractedOutput.path });
+    console.info("[cv-intelligence] OpenAI raw extracted output:", truncateForLog(extractedOutput.text));
 
-    const parsed = parseJson<unknown>(payload.output_text);
+    const parsed = parseJson<unknown>(extractedOutput.text);
     if (!parsed) {
       console.error("[cv-intelligence] JSON parse failed", {
-        outputTextPreview: truncateForLog(payload.output_text),
+        outputTextPreview: truncateForLog(extractedOutput.text),
+        extractedPath: extractedOutput.path,
       });
       console.error("[cv-intelligence] OpenAI returned a valid HTTP response but invalid structured payload", {
         reason: "json_parse_failed",
