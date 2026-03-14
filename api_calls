@@ -1,0 +1,340 @@
+# API endpoints (localhost:3000)
+
+Use this PowerShell pattern for secret-protected endpoints:
+
+$secret="dev_secret_123"
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:3000/api/dev/seed-offers" `
+  -Headers @{ "x-dev-secret"=$secret }
+
+For endpoints that require user auth (session cookie), first call `/api/auth/login` (or `/api/auth/signup`) with `-SessionVariable session`, then reuse `-WebSession $session`.
+
+- **GET /api/health**  
+  **What it does:** Health-check endpoint. Verifies `x-health-key` and checks DB reachability. Returns `{ ok: true, db: "up" }` when healthy.  
+  **Call:**
+  ```powershell
+  $secret="your_health_key"
+
+  Invoke-RestMethod `
+    -Method Get `
+    -Uri "http://localhost:3000/api/health" `
+    -Headers @{ "x-health-key"=$secret }
+  ```
+
+- **POST /api/dev/seed-offers**  
+  **What it does:** Dev-only seeding of sample offers into `offers_raw` (non-production guard + secret required).  
+  **Call:**
+  ```powershell
+  $secret="dev_secret_123"
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/dev/seed-offers" `
+    -Headers @{ "x-dev-secret"=$secret }
+  ```
+
+- **POST /api/dev/run-matching**  
+  **What it does:** Dev-only matching simulation: reads active/trialing users and inserts matched missions + notification queue entries.  
+  **Call:**
+  ```powershell
+  $secret="dev_secret_123"
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/dev/run-matching" `
+    -Headers @{ "x-dev-secret"=$secret }
+  ```
+
+- **POST /api/auth/signup**  
+  **What it does:** Creates a new user (email/password), optionally signs in immediately, and sets auth cookie.  
+  **Call:**
+  ```powershell
+  $body = @{ email="you@example.com"; password="StrongPass123" } | ConvertTo-Json
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/auth/signup" `
+    -ContentType "application/json" `
+    -Body $body `
+    -SessionVariable session
+  ```
+
+- **POST /api/auth/login**  
+  **What it does:** Signs in user and sets auth cookie.  
+  **Call:**
+  ```powershell
+  $body = @{ email="you@example.com"; password="StrongPass123" } | ConvertTo-Json
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/auth/login" `
+    -ContentType "application/json" `
+    -Body $body `
+    -SessionVariable session
+  ```
+
+- **POST /api/auth/logout**  
+  **What it does:** Clears auth cookie for the current session.  
+  **Call:**
+  ```powershell
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/auth/logout" `
+    -WebSession $session
+  ```
+
+- **POST /api/onboarding**  
+  **What it does:** First-time onboarding with CV upload + preferences; validates PDF, extracts CV profile, saves settings, and creates candidate profile.  
+  **Call:**
+  ```powershell
+  $form = @{ 
+    cv = Get-Item ".\cv.pdf"
+    primaryStack = "Next.js"
+    secondaryStack = "Node.js"
+    minDayRate = "700"
+    remotePreference = "remote"
+    countries = "France,Germany"
+    notifyEmail = "on"
+    notifyWhatsapp = "off"
+    notifySms = "off"
+  }
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/onboarding" `
+    -Form $form `
+    -WebSession $session
+  ```
+
+- **POST /api/onboarding/profile-review**  
+  **What it does:** Confirms/edits extracted candidate profile and final settings, then marks profile as confirmed.  
+  **Call:**
+  ```powershell
+  $form = @{
+    title = "Senior Fullstack Engineer"
+    seniority = "senior"
+    yearsExperience = "8"
+    cvRemotePreference = "remote"
+    shortSummary = "Senior engineer focused on Next.js and Node.js"
+    remotePreference = "remote"
+    minDayRate = "700"
+    countries = "France,Germany"
+    primaryStack = "Next.js"
+    secondaryStack = "Node.js"
+    notifyEmail = "on"
+  }
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/onboarding/profile-review" `
+    -Form $form `
+    -WebSession $session `
+    -MaximumRedirection 0
+  ```
+
+- **POST /api/settings**  
+  **What it does:** Updates user job preferences and notification channels.  
+  **Call:**
+  ```powershell
+  $form = @{
+    primaryStack = "Next.js"
+    secondaryStack = "Node.js"
+    minDayRate = "750"
+    remotePreference = "hybrid"
+    countries = "France,Belgium"
+    notifyEmail = "on"
+    notifyWhatsapp = "on"
+    whatsappNumber = "+33612345678"
+  }
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/settings" `
+    -Form $form `
+    -WebSession $session `
+    -MaximumRedirection 0
+  ```
+
+- **POST /api/radar/toggle**  
+  **What it does:** Toggles `radar_active` on/off for current user (redirect response).  
+  **Call:**
+  ```powershell
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/radar/toggle" `
+    -WebSession $session `
+    -MaximumRedirection 0
+  ```
+
+- **POST /api/stripe/checkout**  
+  **What it does:** Creates Stripe checkout session for authenticated user and redirects to Stripe.  
+  **Call:**
+  ```powershell
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/stripe/checkout" `
+    -WebSession $session `
+    -MaximumRedirection 0
+  ```
+
+- **GET /api/stripe/portal**  
+  **What it does:** Creates Stripe customer portal session and redirects there (or `/billing` if none).  
+  **Call:**
+  ```powershell
+  Invoke-RestMethod `
+    -Method Get `
+    -Uri "http://localhost:3000/api/stripe/portal" `
+    -WebSession $session `
+    -MaximumRedirection 0
+  ```
+
+- **POST /api/stripe/webhook**  
+  **What it does:** Stripe webhook receiver (subscription lifecycle updates, idempotent event handling). Requires valid `stripe-signature`.  
+  **Call:**
+  ```powershell
+  $raw = '{"id":"evt_test","type":"invoice.payment_failed","data":{"customer":"cus_123"}}'
+  $sig = "t=1700000000,v1=<computed_hmac_from_raw_body>"
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/stripe/webhook" `
+    -ContentType "application/json" `
+    -Headers @{ "stripe-signature"=$sig } `
+    -Body $raw
+  ```
+
+- **GET /api/cron/run**  
+  **What it does:** Combined cron entrypoint: collects offers + runs matching + stores run status.  
+  **Call:**
+  ```powershell
+  $secret="cron_key_here"
+
+  Invoke-RestMethod `
+    -Method Get `
+    -Uri "http://localhost:3000/api/cron/run" `
+    -Headers @{ "x-cron-key"=$secret }
+  ```
+
+- **GET /api/cron/ingest-offers** (also accepts POST)  
+  **What it does:** Cron-only offer collection run.  
+  **Call:**
+  ```powershell
+  $secret="cron_key_here"
+
+  Invoke-RestMethod `
+    -Method Get `
+    -Uri "http://localhost:3000/api/cron/ingest-offers" `
+    -Headers @{ "x-cron-key"=$secret }
+  ```
+
+- **POST /api/jobs/offers/collect** (also accepts GET)  
+  **What it does:** Job-worker protected endpoint to collect offers.  
+  **Call:**
+  ```powershell
+  $secret="jobs_api_key_here"
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/jobs/offers/collect" `
+    -Headers @{ "x-api-key"=$secret }
+  ```
+
+- **POST /api/jobs/matching/run** (also accepts GET)  
+  **What it does:** Job-worker protected matching run with lock protection to prevent overlap.  
+  **Call:**
+  ```powershell
+  $secret="jobs_api_key_here"
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/jobs/matching/run" `
+    -Headers @{ "x-api-key"=$secret }
+  ```
+
+- **GET /api/notifications/pending**  
+  **What it does:** Returns pending notification queue items for Make/worker (`limit` query param, 1..20).  
+  **Call:**
+  ```powershell
+  $secret="make_notify_key_here"
+
+  Invoke-RestMethod `
+    -Method Get `
+    -Uri "http://localhost:3000/api/notifications/pending?limit=10" `
+    -Headers @{ "x-api-key"=$secret }
+  ```
+
+- **POST /api/notifications/ack**  
+  **What it does:** Marks one notification queue item as sent (acknowledgement endpoint).  
+  **Call:**
+  ```powershell
+  $secret="make_notify_key_here"
+  $body = @{ id="<notification_queue_id>" } | ConvertTo-Json
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/notifications/ack" `
+    -Headers @{ "x-api-key"=$secret } `
+    -ContentType "application/json" `
+    -Body $body
+  ```
+
+- **POST /api/notify/make/pull**  
+  **What it does:** Legacy-style pull endpoint for Make; fetches pending queue items (`limit` in JSON body, max 50).  
+  **Call:**
+  ```powershell
+  $secret="make_notify_key_here"
+  $body = @{ limit=20 } | ConvertTo-Json
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/notify/make/pull" `
+    -Headers @{ "x-api-key"=$secret } `
+    -ContentType "application/json" `
+    -Body $body
+  ```
+
+- **POST /api/notify/make/ack**  
+  **What it does:** Legacy-style ack endpoint for Make; sets queue item status to `sent` or `failed` and increments attempts.  
+  **Call:**
+  ```powershell
+  $secret="make_notify_key_here"
+  $body = @{ id="<notification_queue_id>"; status="sent" } | ConvertTo-Json
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/notify/make/ack" `
+    -Headers @{ "x-api-key"=$secret } `
+    -ContentType "application/json" `
+    -Body $body
+  ```
+
+- **POST /api/missions/ingest**  
+  **What it does:** Protected ingest endpoint to insert one mission for a user email (requires active/trialing subscription, includes rate limit).  
+  **Call:**
+  ```powershell
+  $secret="make_ingest_key_here"
+  $body = @{
+    userEmail = "you@example.com"
+    mission = @{
+      source = "malt"
+      title = "Senior Next.js Contractor"
+      company = "Acme"
+      country = "France"
+      remote = "remote"
+      dayRate = 800
+      url = "https://example.com/job/123"
+      score = 86
+      reasons = "Strong stack match and remote preference"
+      pitch = "I can help build and optimize your Next.js platform..."
+    }
+  } | ConvertTo-Json -Depth 6
+
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:3000/api/missions/ingest" `
+    -Headers @{ "x-api-key"=$secret } `
+    -ContentType "application/json" `
+    -Body $body
+  ```
