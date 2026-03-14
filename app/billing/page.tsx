@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUserClientOrRedirect, isSubscriptionActive, requireUser } from "@/lib/server-auth";
 import { AppShell } from "@/components/app-shell";
-import { getOnboardingState } from "@/lib/onboarding-state";
+import { getOnboardingRedirectPath, getOnboardingState } from "@/lib/onboarding-state";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +42,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: { c
   const active = isSubscriptionActive(status);
 
   if (searchParams?.checkout === "success" && active) {
-    redirect(onboarding.isComplete ? "/app" : "/app/onboarding");
+    redirect(getOnboardingRedirectPath(onboarding));
   }
 
   return (

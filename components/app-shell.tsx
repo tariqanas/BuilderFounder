@@ -7,7 +7,7 @@ export function AppShell({ children, authenticated }: { children: React.ReactNod
       <nav className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <strong>IT Sniper Radar</strong>
         <div style={{ display: "flex", gap: 14 }}>
-          <Link href="/app">Console</Link>
+          <Link href="/app/dashboard">Console</Link>
           <Link href="/app/settings">Settings</Link>
           <Link href="/billing">Billing</Link>
           {authenticated ? <SignOutButton /> : null}
