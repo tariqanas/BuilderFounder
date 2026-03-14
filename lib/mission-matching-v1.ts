@@ -231,15 +231,40 @@ export async function upsertMissionMatch(params: {
   const service = createSupabaseServiceClient();
   const result = scoreMissionMatch({ mission: params.mission, settings: params.settings, candidateProfile: params.candidateProfile });
 
-  await service.from("mission_matches").upsert(
-    {
-      user_id: params.userId,
-      mission_id: params.missionId,
-      score: result.score,
-      reasons: result.reasons.join(" | "),
-    },
-    { onConflict: "user_id,mission_id" }
+  const reasons = result.reasons.join(" | ");
+  console.log(
+    `[matching] mission_match_upsert_start user_id=${params.userId} mission_id=${params.missionId} score=${result.score} reasons=${JSON.stringify(
+      result.reasons
+    )}`
   );
+
+  const { data, error } = await service
+    .from("mission_matches")
+    .upsert(
+      {
+        user_id: params.userId,
+        mission_id: params.missionId,
+        score: result.score,
+        reasons,
+      },
+      { onConflict: "user_id,mission_id" }
+    )
+    .select("id,user_id,mission_id,score,reasons")
+    .maybeSingle();
+
+  console.log(
+    `[matching] mission_match_upsert_response user_id=${params.userId} mission_id=${params.missionId} data=${JSON.stringify(
+      data ?? null
+    )} error=${error ? JSON.stringify(error) : "null"}`
+  );
+
+  if (error) {
+    throw new Error(`mission_match_upsert_failed mission_id=${params.missionId} user_id=${params.userId} code=${error.code ?? "n/a"}`);
+  }
+
+  if (!data) {
+    throw new Error(`mission_match_upsert_empty_response mission_id=${params.missionId} user_id=${params.userId}`);
+  }
 
   return result;
 }
