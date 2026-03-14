@@ -1,9 +1,17 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
+import { getOnboardingRedirectPath, getOnboardingState } from "@/lib/onboarding-state";
 
 export default async function SettingsPage({ searchParams }: { searchParams?: { notice?: string } }) {
   const { user } = await requireUser();
   const supabase = await getUserClientOrRedirect();
+  const onboarding = await getOnboardingState(supabase, user.id);
+  const onboardingRedirectPath = getOnboardingRedirectPath(onboarding);
+  if (onboardingRedirectPath !== "/app/dashboard") {
+    redirect(onboardingRedirectPath);
+  }
+
   const { data: settings } = await supabase
     .from("user_settings")
     .select("primary_stack,secondary_stack,min_day_rate,remote_preference,countries,notify_email,notify_whatsapp,whatsapp_number,notify_sms,sms_number")
@@ -16,7 +24,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: { 
     <main className="card" style={{ maxWidth: 760, display: "grid", gap: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ margin: 0 }}>Mission preferences</h1>
-        <Link href="/app" className="muted">
+        <Link href="/app/dashboard" className="muted">
           Back to dashboard
         </Link>
       </div>

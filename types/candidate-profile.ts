@@ -28,6 +28,7 @@ export type CandidateProfileRecord = {
   profile_summary: string;
   completeness_score: number;
   confidence_score: number;
+  profile_confirmed?: boolean;
 };
 
 export type CandidateProfileErrorCode =

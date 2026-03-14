@@ -44,7 +44,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.push(`/app?notice=${data.notice ?? "onboarding-activated"}`);
+    router.push(data.notice === "profile-review-required" ? "/app/onboarding/profile-review" : `/app?notice=${data.notice ?? "onboarding-activated"}`);
     router.refresh();
   };
 

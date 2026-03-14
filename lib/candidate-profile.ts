@@ -228,6 +228,7 @@ export async function upsertCandidateProfile(params: {
   extractionQuality: number;
   classification: CvClassification;
   openAiExtraction?: OpenAiCvExtractionInput;
+  profileConfirmed?: boolean;
 }): Promise<CandidateProfileResult> {
   try {
     const parsed = await parseCandidateProfile({
@@ -249,6 +250,7 @@ export async function upsertCandidateProfile(params: {
       profile_summary: parsed.profile.short_summary,
       completeness_score: parsed.completenessScore,
       confidence_score: parsed.confidenceScore,
+      ...(typeof params.profileConfirmed === "boolean" ? { profile_confirmed: params.profileConfirmed } : {}),
     };
 
     const supabase = createSupabaseServiceClient();

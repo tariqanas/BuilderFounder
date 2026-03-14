@@ -226,6 +226,7 @@ export async function POST(request: Request) {
           text_excerpt: openAiExtraction.text_excerpt,
         }
       : undefined,
+    profileConfirmed: false,
   });
 
   console.info("[onboarding] candidateProfileResult:", {
@@ -257,7 +258,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    notice: "onboarding-activated",
+    notice: "profile-review-required",
     candidateProfile: {
       status: "ready",
       completeness_score: profileResult.completenessScore,
