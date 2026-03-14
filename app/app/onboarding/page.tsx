@@ -52,26 +52,39 @@ export default function OnboardingPage() {
     <main className="card" style={{ maxWidth: 760, display: "grid", gap: 14, padding: "1.2rem" }}>
       <h1 style={{ marginBottom: 0 }}>Activate your Radar</h1>
       <p className="muted" style={{ marginTop: 0 }}>
-        One setup. Then only qualified signals.
+        We first detect your core profile from your CV, then you can add optional mission preferences.
       </p>
 
       <form onSubmit={onSubmit} encType="multipart/form-data" style={{ display: "grid", gap: 14 }}>
         <section className="card" style={{ background: "#0f0f18", display: "grid", gap: 10 }}>
-          <h2 style={{ margin: 0 }}>1. Profile</h2>
+          <h2 style={{ margin: 0 }}>1. Detected from your CV</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Upload your CV. We use AI to detect your core candidate profile from it.
+          </p>
           <div>
             <label htmlFor="cv">CV (PDF, max 5MB)</label>
             <input id="cv" name="cv" type="file" accept="application/pdf" required />
           </div>
+          <div style={{ display: "grid", gap: 4 }}>
+            <strong style={{ fontSize: "0.95rem" }}>Detected profile fields include:</strong>
+            <span className="muted" style={{ fontSize: "0.95rem" }}>
+              title, seniority, years of experience, programming languages, frameworks, cloud/devops, databases,
+              domains, management signals, primary stack, summary.
+            </span>
+          </div>
         </section>
 
         <section className="card" style={{ background: "#0f0f18", display: "grid", gap: 10 }}>
-          <h2 style={{ margin: 0 }}>2. Matching criteria</h2>
+          <h2 style={{ margin: 0 }}>2. Mission preferences</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            These fields are optional mission-search preferences. They do not overwrite CV-detected profile data.
+          </p>
           <div>
-            <label htmlFor="primaryStack">Primary stack</label>
-            <input id="primaryStack" name="primaryStack" maxLength={120} placeholder="AWS, Terraform, Kubernetes" required />
+            <label htmlFor="primaryStack">Additional primary stack preference (optional)</label>
+            <input id="primaryStack" name="primaryStack" maxLength={120} placeholder="AWS, Terraform, Kubernetes" />
           </div>
           <div>
-            <label htmlFor="secondaryStack">Secondary stack (optional)</label>
+            <label htmlFor="secondaryStack">Additional secondary stack preference (optional)</label>
             <input id="secondaryStack" name="secondaryStack" maxLength={120} placeholder="Python, CI/CD, Observability" />
           </div>
           <div>
@@ -79,54 +92,56 @@ export default function OnboardingPage() {
             <input id="minDayRate" name="minDayRate" type="number" min={1} max={10000} placeholder="650" required />
           </div>
           <div>
-            <label htmlFor="remotePreference">Remote preference</label>
+            <label htmlFor="remotePreference">Preferred work mode</label>
             <select id="remotePreference" name="remotePreference" required>
               <option value="remote">Remote</option>
               <option value="hybrid">Hybrid</option>
               <option value="onsite">On-site</option>
             </select>
+            <span className="muted" style={{ fontSize: "0.9rem" }}>
+              Saved as a mission preference only.
+            </span>
           </div>
           <div>
-            <label htmlFor="countries">Target countries</label>
-            <input id="countries" name="countries" maxLength={300} placeholder="France, Belgium, Luxembourg" required />
+            <label htmlFor="countries">Target countries (optional)</label>
+            <input id="countries" name="countries" maxLength={300} placeholder="France, Belgium, Luxembourg" />
           </div>
-        </section>
+          <fieldset style={{ display: "grid", gap: 8, border: "1px solid var(--border)", borderRadius: 8, padding: 12 }}>
+            <legend style={{ padding: "0 6px" }}>Notification preferences (optional)</legend>
 
-        <section className="card" style={{ background: "#0f0f18", display: "grid", gap: 10 }}>
-          <h2 style={{ margin: 0 }}>3. Notification channels</h2>
+            <label htmlFor="notifyEmail" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0 }}>
+              <input id="notifyEmail" name="notifyEmail" type="checkbox" defaultChecked />
+              Email alerts
+            </label>
 
-          <label htmlFor="notifyEmail" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0 }}>
-            <input id="notifyEmail" name="notifyEmail" type="checkbox" defaultChecked />
-            Email
-          </label>
-
-          <div style={{ display: "grid", gap: 6 }}>
-            <label htmlFor="notifyWhatsapp" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0 }}>
+            <div style={{ display: "grid", gap: 6 }}>
+              <label htmlFor="notifyWhatsapp" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0 }}>
+                <input
+                  id="notifyWhatsapp"
+                  name="notifyWhatsapp"
+                  type="checkbox"
+                  checked={notifyWhatsapp}
+                  onChange={(e) => setNotifyWhatsapp(e.target.checked)}
+                />
+                WhatsApp alerts
+              </label>
               <input
-                id="notifyWhatsapp"
-                name="notifyWhatsapp"
-                type="checkbox"
-                checked={notifyWhatsapp}
-                onChange={(e) => setNotifyWhatsapp(e.target.checked)}
+                id="whatsappNumber"
+                name="whatsappNumber"
+                placeholder="+33612345678"
+                maxLength={16}
+                disabled={!notifyWhatsapp}
               />
-              WhatsApp
-            </label>
-            <input
-              id="whatsappNumber"
-              name="whatsappNumber"
-              placeholder="+33612345678"
-              maxLength={16}
-              disabled={!notifyWhatsapp}
-            />
-          </div>
+            </div>
 
-          <div style={{ display: "grid", gap: 6 }}>
-            <label htmlFor="notifySms" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0 }}>
-              <input id="notifySms" name="notifySms" type="checkbox" checked={notifySms} onChange={(e) => setNotifySms(e.target.checked)} />
-              SMS
-            </label>
-            <input id="smsNumber" name="smsNumber" placeholder="+33612345678" maxLength={16} disabled={!notifySms} />
-          </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              <label htmlFor="notifySms" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 0 }}>
+                <input id="notifySms" name="notifySms" type="checkbox" checked={notifySms} onChange={(e) => setNotifySms(e.target.checked)} />
+                SMS alerts
+              </label>
+              <input id="smsNumber" name="smsNumber" placeholder="+33612345678" maxLength={16} disabled={!notifySms} />
+            </div>
+          </fieldset>
         </section>
 
         <aside className="card" style={{ background: "#111124", display: "grid", gap: 4 }}>
