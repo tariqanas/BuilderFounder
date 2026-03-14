@@ -156,6 +156,11 @@ function parseJson<T>(raw: string): T | null {
   }
 }
 
+function truncateForLog(value: string, maxLength = 1600): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength)}... [truncated ${value.length - maxLength} chars]`;
+}
+
 const CV_EXTRACTION_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -293,11 +298,39 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
     console.info("[cv-intelligence] OpenAI response status", { status: response.status, ok: response.ok });
     if (!response.ok) return null;
     const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) return null;
+    if (!payload.output_text) {
+      console.error("[cv-intelligence] Missing output_text", {
+        payloadKeys: Object.keys(payload ?? {}),
+        openAiResponseOk: response.ok,
+      });
+      console.error("[cv-intelligence] OpenAI returned a valid HTTP response but invalid structured payload", {
+        reason: "missing_output_text",
+      });
+      return null;
+    }
+
+    console.info("[cv-intelligence] OpenAI raw output_text:", truncateForLog(payload.output_text));
 
     const parsed = parseJson<unknown>(payload.output_text);
-    if (!isStructuredExtraction(parsed)) {
-      console.error("[cv-intelligence] OpenAI schema validation failed", { parsed });
+    if (!parsed) {
+      console.error("[cv-intelligence] JSON parse failed", {
+        outputTextPreview: truncateForLog(payload.output_text),
+      });
+      console.error("[cv-intelligence] OpenAI returned a valid HTTP response but invalid structured payload", {
+        reason: "json_parse_failed",
+      });
+      return null;
+    }
+
+    console.info("[cv-intelligence] Parsed OpenAI JSON:", parsed);
+
+    const isValidStructuredExtraction = isStructuredExtraction(parsed);
+    console.info("[cv-intelligence] Structured extraction valid:", isValidStructuredExtraction);
+    if (!isValidStructuredExtraction) {
+      console.error("[cv-intelligence] Structured extraction schema mismatch", { parsed });
+      console.error("[cv-intelligence] OpenAI returned a valid HTTP response but invalid structured payload", {
+        reason: "structured_extraction_schema_mismatch",
+      });
       return null;
     }
     console.info("[cv-intelligence] raw OpenAI extraction", parsed);
