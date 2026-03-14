@@ -24,3 +24,14 @@ export type Mission = {
   pitch: string;
   created_at: string;
 };
+
+
+export type MissionMatch = {
+  id: string;
+  user_id: string;
+  mission_id: string;
+  score: number;
+  reasons: string;
+  created_at: string;
+  updated_at: string;
+};

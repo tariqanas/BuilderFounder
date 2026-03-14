@@ -54,11 +54,22 @@ export default async function DashboardPage({
     .order("created_at", { ascending: false })
     .limit(20);
 
+  const missionIds = (missionsData ?? []).map((mission) => mission.id);
+  const { data: missionMatches } = missionIds.length
+    ? await supabase
+        .from("mission_matches")
+        .select("mission_id,score,reasons")
+        .eq("user_id", user.id)
+        .in("mission_id", missionIds)
+    : { data: [] as Array<{ mission_id: string; score: number; reasons: string }> };
+
+  const missionMatchByMissionId = new Map((missionMatches ?? []).map((match) => [match.mission_id, match]));
+
   const safeMissions = (missionsData ?? []).map((m) => ({
     id: m.id,
     title: cleanMissionText(m.title, "Untitled mission"),
     company: cleanMissionText(m.company, "Unknown company"),
-    score: Number(m.score ?? 0),
+    score: Number(missionMatchByMissionId.get(m.id)?.score ?? m.score ?? 0),
     pitch: isPitchUsable(m.pitch)
       ? m.pitch
       : buildFallbackPitch({
@@ -70,7 +81,7 @@ export default async function DashboardPage({
         }),
     url: cleanMissionText(m.url, ""),
     hasValidUrl: isMissionUrlUsable(m.url),
-    reasons: toMissionReasons(m.reasons),
+    reasons: toMissionReasons(missionMatchByMissionId.get(m.id)?.reasons ?? m.reasons),
   }));
 
 
