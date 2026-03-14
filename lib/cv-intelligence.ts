@@ -255,7 +255,7 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
           {
             role: "system",
             content:
-              "You are a strict CV parser. Read the attached PDF directly. If document is not a usable professional resume/CV, set is_cv=false and explain in rejection_reason. Never hallucinate missing fields.",
+              "You are a strict CV/resume intelligence engine for technical hiring. Read the full attached PDF directly. First decide if this is a usable professional CV/resume. If not, set is_cv=false and provide rejection_reason. If usable, infer the real candidate profile semantically from the document content. Support French, English, and mixed CVs. Prefer null over hallucination and keep category boundaries strict (programming languages vs frameworks vs cloud/devops vs databases vs AI/data).",
           },
           {
             role: "user",
@@ -264,7 +264,7 @@ export async function extractCvFromPdfWithOpenAI(pdfBuffer: Buffer, filename = "
               {
                 type: "input_text",
                 text:
-                  "Return strict JSON only. Detect language, extraction quality, and candidate profile fields. text_excerpt should contain compact resume text (max 2500 chars) to support downstream matching.",
+                  "Return strict JSON only. Determine: is_cv, language, extraction_quality, and the full candidate profile. Title must reflect dominant positioning. Years_experience: explicit mention first, chronology second. Domains must come from professional experience, not hobbies. management_signals must be inferred from role/responsibility evidence. short_summary must be specific and grounded. text_excerpt should contain compact resume text (max 2500 chars) to support downstream matching.",
               },
             ],
           },
@@ -362,10 +362,10 @@ export async function classifyCvText(text: string, extractionQuality: number): P
     if (!ai) return deterministic;
 
     return {
-      is_cv: deterministic.is_cv || (ai.is_cv && ai.confidence >= 0.55),
+      is_cv: ai.is_cv,
       language: ai.language !== "unknown" ? ai.language : deterministic.language,
-      confidence: Number(((deterministic.confidence * 0.45 + ai.confidence * 0.55)).toFixed(3)),
-      reason: `${deterministic.reason} AI: ${ai.reason}`.slice(0, 380),
+      confidence: Number(Math.max(0, Math.min(1, ai.confidence)).toFixed(3)),
+      reason: ai.reason.slice(0, 380),
       deterministicSignals: deterministic.deterministicSignals,
     };
   } catch {

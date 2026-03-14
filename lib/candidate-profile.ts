@@ -1,4 +1,3 @@
-import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { type CvClassification } from "@/lib/cv-intelligence";
 import {
@@ -42,31 +41,6 @@ type ParseContext = {
 };
 
 type ParseStrategy = "openai" | "deterministic_fallback";
-type Confidence = "low" | "medium" | "high";
-
-type FieldEvidence<T> = {
-  value: T;
-  confidence: Confidence;
-  evidence: string[];
-};
-
-type AiEvidencePayload = {
-  title: FieldEvidence<string | null>;
-  seniority: FieldEvidence<string | null>;
-  years_experience: FieldEvidence<number | null>;
-  programming_languages: FieldEvidence<string[]>;
-  frameworks: FieldEvidence<string[]>;
-  cloud_devops: FieldEvidence<string[]>;
-  databases: FieldEvidence<string[]>;
-  ai_data_skills: FieldEvidence<string[]>;
-  primary_stack: FieldEvidence<string[]>;
-  domains: FieldEvidence<string[]>;
-  spoken_languages: FieldEvidence<string[]>;
-  management_signals: FieldEvidence<string[]>;
-  remote_preference: FieldEvidence<CandidateRemotePreference>;
-  short_summary: FieldEvidence<string>;
-  extraction_notes: string[];
-};
 
 type DeterministicEvidence = {
   titleCandidates: string[];
@@ -88,94 +62,6 @@ type DeterministicEvidence = {
 const SECTION_KEYS = ["header", "summary", "skills", "experience", "education", "certifications", "projects", "languages", "other"] as const;
 type SectionKey = (typeof SECTION_KEYS)[number];
 
-const AI_PROFILE_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    title: { $ref: "#/$defs/stringOrNullField" },
-    seniority: { $ref: "#/$defs/stringOrNullField" },
-    years_experience: { $ref: "#/$defs/numberOrNullField" },
-    programming_languages: { $ref: "#/$defs/stringArrayField" },
-    frameworks: { $ref: "#/$defs/stringArrayField" },
-    cloud_devops: { $ref: "#/$defs/stringArrayField" },
-    databases: { $ref: "#/$defs/stringArrayField" },
-    ai_data_skills: { $ref: "#/$defs/stringArrayField" },
-    primary_stack: { $ref: "#/$defs/stringArrayField" },
-    domains: { $ref: "#/$defs/stringArrayField" },
-    spoken_languages: { $ref: "#/$defs/stringArrayField" },
-    management_signals: { $ref: "#/$defs/stringArrayField" },
-    remote_preference: { $ref: "#/$defs/remoteField" },
-    short_summary: { $ref: "#/$defs/stringField" },
-    extraction_notes: { type: "array", items: { type: "string" } },
-  },
-  required: [
-    "title",
-    "seniority",
-    "years_experience",
-    "programming_languages",
-    "frameworks",
-    "cloud_devops",
-    "databases",
-    "ai_data_skills",
-    "primary_stack",
-    "domains",
-    "spoken_languages",
-    "management_signals",
-    "remote_preference",
-    "short_summary",
-    "extraction_notes",
-  ],
-  $defs: {
-    confidence: { type: "string", enum: ["low", "medium", "high"] },
-    evidenceList: { type: "array", items: { type: "string" } },
-    stringField: {
-      type: "object",
-      additionalProperties: false,
-      properties: { value: { type: "string" }, confidence: { $ref: "#/$defs/confidence" }, evidence: { $ref: "#/$defs/evidenceList" } },
-      required: ["value", "confidence", "evidence"],
-    },
-    stringOrNullField: {
-      type: "object",
-      additionalProperties: false,
-      properties: { value: { type: ["string", "null"] }, confidence: { $ref: "#/$defs/confidence" }, evidence: { $ref: "#/$defs/evidenceList" } },
-      required: ["value", "confidence", "evidence"],
-    },
-    numberOrNullField: {
-      type: "object",
-      additionalProperties: false,
-      properties: { value: { type: ["number", "null"] }, confidence: { $ref: "#/$defs/confidence" }, evidence: { $ref: "#/$defs/evidenceList" } },
-      required: ["value", "confidence", "evidence"],
-    },
-    stringArrayField: {
-      type: "object",
-      additionalProperties: false,
-      properties: { value: { type: "array", items: { type: "string" } }, confidence: { $ref: "#/$defs/confidence" }, evidence: { $ref: "#/$defs/evidenceList" } },
-      required: ["value", "confidence", "evidence"],
-    },
-    remoteField: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        value: { type: "string", enum: ["remote", "hybrid", "onsite", "unknown"] },
-        confidence: { $ref: "#/$defs/confidence" },
-        evidence: { $ref: "#/$defs/evidenceList" },
-      },
-      required: ["value", "confidence", "evidence"],
-    },
-  },
-} as const;
-
-const OPENAI_STRUCTURING_PROMPT = [
-  "You are an evidence-based CV parser for technical hiring.",
-  "Input may be French, English, or mixed.",
-  "Use deterministic evidence as primary hints, then validate against sections/text.",
-  "Do not hallucinate. If weak evidence, return null or empty arrays.",
-  "Title must be grounded in header first, then summary.",
-  "Years of experience priority: explicit statement > chronology.",
-  "Respect category boundaries: programming languages vs frameworks vs cloud/devops vs databases.",
-  "short_summary must describe dominant real positioning only.",
-  "Return strict JSON and include concise evidence snippets for each field.",
-].join("\n");
 
 const TECH_ONTOLOGY: Array<{ canonical: string; aliases: string[]; category: keyof DeterministicEvidence["technologyCandidates"] }> = [
   { canonical: "JavaScript", aliases: ["javascript", "js"], category: "programming_languages" },
@@ -272,13 +158,6 @@ function normalizeText(text: string): string {
   return text.replace(/\r/g, "\n").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, 80000);
 }
 
-function parseJson<T>(raw: string): T | null {
-  try {
-    return JSON.parse(raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "")) as T;
-  } catch {
-    return null;
-  }
-}
 
 function uniq(items: string[]): string[] {
   return [...new Set(items.map((x) => x.trim()).filter(Boolean))];
@@ -398,49 +277,6 @@ function extractDeterministicEvidence(sections: Record<SectionKey, string>, full
   };
 }
 
-function isEvidencePayload(value: unknown): value is AiEvidencePayload {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Partial<AiEvidencePayload>;
-  return Boolean(v.title && v.years_experience && v.primary_stack && v.short_summary && Array.isArray(v.extraction_notes));
-}
-
-async function parseWithAI(input: { cleanedText: string; sections: Record<SectionKey, string>; deterministicEvidence: DeterministicEvidence }): Promise<AiEvidencePayload | null> {
-  if (!env.OPENAI_API_KEY) return null;
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL,
-      input: [
-        { role: "system", content: OPENAI_STRUCTURING_PROMPT },
-        {
-          role: "user",
-          content: JSON.stringify({ cleaned_text: input.cleanedText.slice(0, 32000), sections: input.sections, deterministic_evidence: input.deterministicEvidence }),
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "candidate_profile_evidence",
-          strict: true,
-          schema: AI_PROFILE_SCHEMA,
-        },
-      },
-      max_output_tokens: 2200,
-    }),
-  });
-
-  if (!response.ok) return null;
-  const payload = (await response.json()) as { output_text?: string };
-  if (!payload.output_text) return null;
-  const parsed = parseJson<unknown>(payload.output_text);
-  return isEvidencePayload(parsed) ? parsed : null;
-}
-
 function buildProfileFromEvidence(evidence: DeterministicEvidence): CandidateProfile {
   const years = evidence.yearsSignals.find((s) => s.source === "explicit") ?? evidence.yearsSignals[0] ?? null;
   const seniority = normalizeSeniority(evidence.seniorityCandidates[0] ?? null);
@@ -478,26 +314,6 @@ function buildProfileFromOpenAiExtraction(extraction: OpenAiCvExtractionInput): 
     management_signals: extraction.management_signals,
     remote_preference: extraction.remote_preference,
     short_summary: extraction.short_summary,
-  };
-}
-
-function mergeAiProfile(base: CandidateProfile, ai: AiEvidencePayload): CandidateProfile {
-  return {
-    ...base,
-    title: ai.title.value,
-    seniority: ai.seniority.value,
-    years_experience: ai.years_experience.value,
-    primary_stack: ai.primary_stack.value,
-    programming_languages: ai.programming_languages.value,
-    frameworks: ai.frameworks.value,
-    cloud_devops: ai.cloud_devops.value,
-    databases: ai.databases.value,
-    ai_data_skills: ai.ai_data_skills.value,
-    domains: ai.domains.value,
-    spoken_languages: ai.spoken_languages.value,
-    management_signals: ai.management_signals.value,
-    remote_preference: ai.remote_preference.value,
-    short_summary: ai.short_summary.value,
   };
 }
 
@@ -562,39 +378,19 @@ function scoreCompleteness(profile: CandidateProfile): number {
   return checks.reduce((sum, item) => sum + (item.ok ? item.weight : 0), 0);
 }
 
-function confidenceWeight(level: Confidence): number {
-  if (level === "high") return 1;
-  if (level === "medium") return 0.65;
-  return 0.35;
-}
-
 function scoreConfidence(params: {
   profile: CandidateProfile;
   context: ParseContext;
   strategy: ParseStrategy;
   evidence: DeterministicEvidence;
-  aiPayload: AiEvidencePayload | null;
 }): number {
   let score = 0;
-  score += Math.round(params.context.extractionQuality * 25);
-  score += Math.round(params.context.classification.confidence * 20);
-  score += Math.min(20, params.evidence.yearsSignals.length * 3 + params.evidence.titleCandidates.length * 4 + params.evidence.managementSignals.length * 1);
+  score += Math.round(params.context.extractionQuality * 35);
+  score += Math.round(params.context.classification.confidence * 35);
+  score += Math.min(20, params.evidence.yearsSignals.length * 4 + params.evidence.titleCandidates.length * 4 + params.evidence.managementSignals.length * 1);
 
-  if (params.strategy === "openai" && params.aiPayload) {
-    const aiSignals = [
-      params.aiPayload.title.confidence,
-      params.aiPayload.seniority.confidence,
-      params.aiPayload.years_experience.confidence,
-      params.aiPayload.programming_languages.confidence,
-      params.aiPayload.frameworks.confidence,
-      params.aiPayload.databases.confidence,
-    ];
-    score += Math.round((aiSignals.reduce((acc, cur) => acc + confidenceWeight(cur), 0) / aiSignals.length) * 25);
-  } else {
-    score += 6;
-  }
-
-  if (!params.context.classification.is_cv) score -= 25;
+  if (params.strategy === "openai") score += 10;
+  if (!params.context.classification.is_cv) score -= 30;
   if (params.profile.years_experience !== null && params.profile.seniority === "junior" && params.profile.years_experience > 6) score -= 8;
   return Math.max(0, Math.min(100, score));
 }
@@ -612,26 +408,8 @@ export async function parseCandidateProfile(context: ParseContext): Promise<Cand
 
   const sections = buildSections(context, normalized);
   const deterministicEvidence = extractDeterministicEvidence(sections, normalized);
+  const strategy: ParseStrategy = context.openAiExtraction ? "openai" : "deterministic_fallback";
   let profile = context.openAiExtraction ? buildProfileFromOpenAiExtraction(context.openAiExtraction) : buildProfileFromEvidence(deterministicEvidence);
-  let aiPayload: AiEvidencePayload | null = null;
-  let strategy: ParseStrategy = context.openAiExtraction ? "openai" : "deterministic_fallback";
-
-  try {
-    if (context.openAiExtraction) {
-      profile = {
-        ...profile,
-        title: profile.title ?? deterministicEvidence.titleCandidates[0] ?? null,
-        years_experience: profile.years_experience ?? (deterministicEvidence.yearsSignals[0]?.years ?? null),
-      };
-    }
-    aiPayload = await parseWithAI({ cleanedText: normalized, sections, deterministicEvidence });
-    if (aiPayload) {
-      profile = mergeAiProfile(profile, aiPayload);
-      strategy = "openai";
-    }
-  } catch (error) {
-    console.error("[candidate-profile] ai parsing failure", { error });
-  }
 
   profile = normalizeProfile(profile);
   if (!hasMinimumUsableSignal(profile)) {
@@ -639,14 +417,13 @@ export async function parseCandidateProfile(context: ParseContext): Promise<Cand
   }
 
   const completenessScore = scoreCompleteness(profile);
-  const confidenceScore = scoreConfidence({ profile, context, strategy, evidence: deterministicEvidence, aiPayload });
+  const confidenceScore = scoreConfidence({ profile, context, strategy, evidence: deterministicEvidence });
 
   console.info("[candidate-profile] evidence-audit", {
     strategy,
     titleCandidates: deterministicEvidence.titleCandidates,
     yearsSignals: deterministicEvidence.yearsSignals.slice(0, 3),
     technologyCandidates: deterministicEvidence.technologyCandidates,
-    aiNotes: aiPayload?.extraction_notes?.slice(0, 6) ?? [],
     completenessScore,
     confidenceScore,
   });
