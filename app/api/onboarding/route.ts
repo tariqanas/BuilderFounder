@@ -3,7 +3,13 @@ import { createSupabaseServiceClient } from "@/lib/supabase";
 import { extractPdfText, isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 import { upsertCandidateProfile } from "@/lib/candidate-profile";
-import { classifyCvText, extractCvFromPdfWithOpenAI, preprocessCvText } from "@/lib/cv-intelligence";
+import {
+  classifyCvText,
+  extractCvFromPdfWithOpenAI,
+  preprocessCvText,
+  type CvClassification,
+  type CvPreprocessResult,
+} from "@/lib/cv-intelligence";
 
 function isPdf(buffer: Buffer) {
   return buffer.subarray(0, 4).toString() === "%PDF";
@@ -60,8 +66,8 @@ export async function POST(request: Request) {
     console.error("[onboarding] openai cv extraction failed", { userId: user.id, error });
   }
 
-  let preprocessedCv = preprocessCvText(openAiExtraction?.text_excerpt ?? "");
-  let cvClassification = await classifyCvText(preprocessedCv.sectionedText || preprocessedCv.normalizedText, preprocessedCv.extractionQuality);
+  let preprocessedCv: CvPreprocessResult;
+  let cvClassification: CvClassification;
   let strategy: "openai_pdf" | "text_fallback" = "openai_pdf";
 
   if (openAiExtraction) {
@@ -71,7 +77,7 @@ export async function POST(request: Request) {
       language: openAiExtraction.language,
       confidence: openAiExtraction.extraction_quality,
       reason: openAiExtraction.is_cv
-        ? "Validated by OpenAI direct PDF classification."
+        ? "Validated by OpenAI full-document CV classification."
         : openAiExtraction.rejection_reason || "OpenAI determined the PDF is not a usable CV/resume.",
       deterministicSignals: [],
     };

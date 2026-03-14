@@ -1,4 +1,4 @@
-export const CANDIDATE_PROFILE_PARSER_VERSION = "v5.0.0";
+export const CANDIDATE_PROFILE_PARSER_VERSION = "v6.0.0";
 
 export type CandidateRemotePreference = "remote" | "hybrid" | "onsite" | "unknown";
 
