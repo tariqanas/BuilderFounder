@@ -20,14 +20,18 @@ export async function POST(request: Request) {
   const smsNumber = formData.get("smsNumber");
 
   const minDayRateInt = toInt(minDayRate, 1, 10000);
+  const parsedCountries = String(countries ?? "")
+    .split(",")
+    .map((country) => country.trim())
+    .filter(Boolean);
   const allowedRemote = remotePreference === "remote" || remotePreference === "hybrid" || remotePreference === "onsite";
 
   if (
-    !isNonEmptyString(primaryStack, 120) ||
+    (primaryStack && !isNonEmptyString(primaryStack, 120)) ||
     (secondaryStack && !isNonEmptyString(secondaryStack, 120)) ||
     minDayRateInt === null ||
     !allowedRemote ||
-    !isNonEmptyString(countries, 100) ||
+    (countries && !isNonEmptyString(countries, 200)) ||
     (notifyWhatsapp && !isE164Phone(whatsappNumber)) ||
     (notifySms && !isE164Phone(smsNumber))
   ) {
@@ -37,14 +41,11 @@ export async function POST(request: Request) {
   const { error } = await service.from("user_settings").upsert(
     {
       user_id: user.id,
-      primary_stack: String(primaryStack),
+      primary_stack: isNonEmptyString(primaryStack, 120) ? String(primaryStack).trim() : null,
       secondary_stack: secondaryStack ? String(secondaryStack) : null,
       min_day_rate: minDayRateInt,
       remote_preference: String(remotePreference),
-      countries: String(countries)
-        .split(",")
-        .map((country) => country.trim())
-        .filter(Boolean),
+      countries: parsedCountries.length ? parsedCountries : null,
       notify_email: notifyEmail,
       notify_whatsapp: notifyWhatsapp,
       whatsapp_number: notifyWhatsapp ? String(whatsappNumber) : null,

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 type UserSettings = {
   user_id: string;
-  primary_stack: string;
+  primary_stack: string | null;
   secondary_stack: string | null;
   min_day_rate: number | null;
   remote_preference: string | null;
@@ -19,6 +19,11 @@ type UserSettings = {
   sms_number: string | null;
 };
 
+
+type CandidateProfileSnapshot = {
+  primary_stack: string[];
+  remote_preference: "remote" | "hybrid" | "onsite" | "unknown";
+};
 type Offer = {
   source: string;
   title: string;
@@ -40,6 +45,22 @@ function isAuthorizedDevRequest(request: Request) {
 function includesKeyword(content: string | null | undefined, keyword: string | null | undefined) {
   if (content == null || keyword == null) return false;
   return content.toLowerCase().includes(keyword.toLowerCase());
+}
+
+function nonEmpty(value: string | null | undefined) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function resolvePrimaryStacks(user: UserSettings, candidateProfile: CandidateProfileSnapshot | null) {
+  const settingsStacks = [user.primary_stack, user.secondary_stack].filter(nonEmpty).map((stack) => String(stack).trim());
+  const cvStacks = (candidateProfile?.primary_stack ?? []).filter(nonEmpty).map((stack) => String(stack).trim());
+  return [...new Set([...settingsStacks, ...cvStacks])];
+}
+
+function resolveSearchRemotePreference(user: UserSettings, candidateProfile: CandidateProfileSnapshot | null) {
+  if (nonEmpty(user.remote_preference)) return user.remote_preference;
+  if (candidateProfile && candidateProfile.remote_preference !== "unknown") return candidateProfile.remote_preference;
+  return null;
 }
 
 function remoteMatches(preference: string | null, offerRemote: string | null) {
@@ -99,6 +120,18 @@ export async function POST(request: Request) {
 
   const users = (usersData ?? []) as UserSettings[];
 
+  const { data: candidateProfileRows } = await service
+    .from("candidate_profiles")
+    .select("user_id, profile_json")
+    .in("user_id", users.map((row) => row.user_id));
+
+  const candidateProfileByUserId = new Map<string, CandidateProfileSnapshot>();
+  for (const row of candidateProfileRows ?? []) {
+    const raw = (row as { user_id: string; profile_json: CandidateProfileSnapshot | null }).profile_json;
+    if (!raw) continue;
+    candidateProfileByUserId.set((row as { user_id: string }).user_id, raw);
+  }
+
   const { data: profiles } = await service
     .from("profiles")
     .select("user_id, email")
@@ -134,17 +167,21 @@ export async function POST(request: Request) {
 
     const existingUrls = new Set((existingWeekMissions ?? []).map((mission) => mission.url));
 
+    const candidateProfile = candidateProfileByUserId.get(user.user_id) ?? null;
+    const stacks = resolvePrimaryStacks(user, candidateProfile);
+    const remotePreference = resolveSearchRemotePreference(user, candidateProfile);
+
     const scored = offers.map((offer) => {
       let score = 0;
       const reasons: string[] = [];
       const text = `${offer.title ?? ""} ${offer.description ?? ""}`;
 
-      if (includesKeyword(text, user.primary_stack)) {
+      if (stacks.some((stack) => includesKeyword(text, stack))) {
         score += 40;
         reasons.push("Stack match");
       }
 
-      if (remoteMatches(user.remote_preference, offer.remote)) {
+      if (remoteMatches(remotePreference, offer.remote)) {
         score += 20;
         reasons.push("Remote match");
       }
@@ -180,7 +217,7 @@ export async function POST(request: Request) {
         title: cleanMissionText(item.offer.title, "mission"),
         company: cleanMissionText(item.offer.company, "company"),
         reasons: item.reasons.split("|").map((r) => r.trim()).filter(Boolean),
-        primaryStack: user.primary_stack,
+        primaryStack: user.primary_stack ?? candidateProfile?.primary_stack?.[0] ?? "",
         secondaryStack: user.secondary_stack,
       });
       const createdAt = new Date().toISOString();
