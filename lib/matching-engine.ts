@@ -236,6 +236,28 @@ function parsePitchJson(raw: string): { subject: string; pitch: string } | null 
   }
 }
 
+function extractResponseText(payload: { output_text?: unknown; output?: unknown }) {
+  if (typeof payload.output_text === "string" && payload.output_text.trim().length > 0) {
+    return payload.output_text;
+  }
+
+  if (!Array.isArray(payload.output)) return "";
+
+  const textParts = payload.output
+    .flatMap((item) => {
+      const content = (item as { content?: unknown }).content;
+      return Array.isArray(content) ? content : [];
+    })
+    .filter((contentItem) => (contentItem as { type?: unknown }).type === "output_text")
+    .map((contentItem) => {
+      const text = (contentItem as { text?: unknown }).text;
+      return typeof text === "string" ? text : "";
+    })
+    .filter((text) => text.trim().length > 0);
+
+  return textParts.join("\n");
+}
+
 async function scoreWithOpenAI(
   offer: OfferRow,
   stacks: string[],
@@ -300,15 +322,16 @@ async function scoreWithOpenAI(
       return null;
     }
 
-    const payload = (await response.json()) as { output_text?: string; output?: unknown };
-    if (!payload.output_text) {
+    const payload = (await response.json()) as { output_text?: unknown; output?: unknown };
+    const responseText = extractResponseText(payload);
+    if (!responseText) {
       console.error(
         `[matching] ai_empty_output_text status=${response.status} status_text=${response.statusText} offer_hash=${offer.hash} user_id=${user.user_id} payload=${JSON.stringify(payload)} output=${JSON.stringify(payload.output)}`
       );
       return null;
     }
 
-    const parsed = parseScoreJson(payload.output_text);
+    const parsed = parseScoreJson(responseText);
     if (!parsed) {
       console.error("[matching] ai_output_json_invalid");
     }
@@ -374,9 +397,10 @@ async function makePitchWithOpenAI(
   });
 
   if (!response.ok) return null;
-  const payload = (await response.json()) as { output_text?: string };
-  if (!payload.output_text) return null;
-  return parsePitchJson(payload.output_text);
+  const payload = (await response.json()) as { output_text?: unknown; output?: unknown };
+  const responseText = extractResponseText(payload);
+  if (!responseText) return null;
+  return parsePitchJson(responseText);
 }
 
 export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) {
