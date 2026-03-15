@@ -3,10 +3,13 @@ import { SignOutButton } from "@/components/sign-out-button";
 
 export function AppShell({ children, authenticated }: { children: React.ReactNode; authenticated: boolean }) {
   return (
-    <div className="container" style={{ display: "grid", gap: 16 }}>
-      <nav className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong>IT Sniper Radar</strong>
-        <div style={{ display: "flex", gap: 14 }}>
+    <div className="container app-shell">
+      <nav className="card top-nav">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true" />
+          <strong>IT-Sniper</strong>
+        </div>
+        <div className="top-nav-links">
           <Link href="/app/dashboard">Console</Link>
           <Link href="/app/settings">Settings</Link>
           <Link href="/billing">Billing</Link>

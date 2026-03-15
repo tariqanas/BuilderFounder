@@ -12,6 +12,20 @@ import {
   toMissionReasons,
 } from "@/lib/mission-utils";
 
+const timeAgo = (value: string | null) => {
+  if (!value) return "No scan yet";
+
+  const diffMs = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+};
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -44,88 +58,94 @@ export default async function DashboardPage({
     .eq("user_id", user.id)
     .gte("created_at", weekStart);
 
+  const { data: latestMatch } = await supabase
+    .from("mission_matches")
+    .select("created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const matchScoreThreshold = resolveMatchScoreThreshold(undefined);
 
-  const { data: missionsData } = await supabase
-    .from("missions")
-    .select("id,title,company,score,pitch,url,reasons")
+  const { data: matchesData } = await supabase
+    .from("mission_matches")
+    .select("score,reasons,mission_id,missions(id,title,company,country,remote,day_rate,url,pitch,reasons,created_at)")
     .eq("user_id", user.id)
     .gte("score", matchScoreThreshold)
-    .order("created_at", { ascending: false })
+    .order("score", { ascending: false })
     .limit(20);
 
-  const missionIds = (missionsData ?? []).map((mission) => mission.id);
-  const { data: missionMatches } = missionIds.length
-    ? await supabase
-        .from("mission_matches")
-        .select("mission_id,score,reasons")
-        .eq("user_id", user.id)
-        .in("mission_id", missionIds)
-    : { data: [] as Array<{ mission_id: string; score: number; reasons: string }> };
+  const safeMissions = (matchesData ?? [])
+    .map((match) => {
+      const mission = Array.isArray(match.missions) ? match.missions[0] : match.missions;
+      if (!mission) return null;
 
-  const missionMatchByMissionId = new Map((missionMatches ?? []).map((match) => [match.mission_id, match]));
-
-  const safeMissions = (missionsData ?? []).map((m) => ({
-    id: m.id,
-    title: cleanMissionText(m.title, "Untitled mission"),
-    company: cleanMissionText(m.company, "Unknown company"),
-    score: Number(missionMatchByMissionId.get(m.id)?.score ?? m.score ?? 0),
-    pitch: isPitchUsable(m.pitch)
-      ? m.pitch
-      : buildFallbackPitch({
-          title: m.title,
-          company: m.company,
-          reasons: toMissionReasons(m.reasons),
-          primaryStack: settings?.primary_stack,
-          secondaryStack: settings?.secondary_stack,
-        }),
-    url: cleanMissionText(m.url, ""),
-    hasValidUrl: isMissionUrlUsable(m.url),
-    reasons: toMissionReasons(missionMatchByMissionId.get(m.id)?.reasons ?? m.reasons),
-  }));
-
+      return {
+        id: mission.id,
+        title: cleanMissionText(mission.title, "Untitled mission"),
+        company: cleanMissionText(mission.company, "Unknown company"),
+        score: Number(match.score ?? 0),
+        pitch: isPitchUsable(mission.pitch)
+          ? mission.pitch
+          : buildFallbackPitch({
+              title: mission.title,
+              company: mission.company,
+              reasons: toMissionReasons(match.reasons ?? mission.reasons),
+              primaryStack: settings?.primary_stack,
+              secondaryStack: settings?.secondary_stack,
+            }),
+        url: cleanMissionText(mission.url, ""),
+        hasValidUrl: isMissionUrlUsable(mission.url),
+        reasons: toMissionReasons(match.reasons ?? mission.reasons),
+        createdAt: mission.created_at,
+        country: cleanMissionText(mission.country, "Global"),
+        remote: cleanMissionText(mission.remote, "Remote"),
+        dayRate: mission.day_rate,
+      };
+    })
+    .filter((mission): mission is NonNullable<typeof mission> => mission !== null);
 
   return (
-    <main style={{ display: "grid", gap: 16 }}>
-      {searchParams?.notice === "onboarding-activated" && <p className="card">Success. Radar is now active.</p>}
-      {searchParams?.notice === "profile-confirmed" && <p className="card">Profile confirmed. Welcome to your dashboard.</p>}
-      {searchParams?.notice === "radar-activated" && <p className="card">Radar activated.</p>}
-      {searchParams?.notice === "radar-paused" && <p className="card">Radar paused.</p>}
-      {searchParams?.notice === "radar-update-failed" && <p className="card">Unable to update radar status right now.</p>}
-      {searchParams?.notice === "cv-empty-text" && <p className="card">CV saved, but no extractable text was detected in the PDF.</p>}
+    <main className="dashboard-layout">
+      {searchParams?.notice === "onboarding-activated" && <p className="notice">Success. Radar is now active.</p>}
+      {searchParams?.notice === "profile-confirmed" && <p className="notice">Profile confirmed. Welcome to your dashboard.</p>}
+      {searchParams?.notice === "radar-activated" && <p className="notice">Radar activated.</p>}
+      {searchParams?.notice === "radar-paused" && <p className="notice">Radar paused.</p>}
+      {searchParams?.notice === "radar-update-failed" && <p className="notice">Unable to update radar status right now.</p>}
+      {searchParams?.notice === "cv-empty-text" && <p className="notice">CV saved, but no extractable text was detected in the PDF.</p>}
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-        <article className="card" style={{ display: "grid", gap: 4 }}>
+      <section className="status-grid">
+        <article className="card status-card">
           <span className="muted">Subscription</span>
           <strong>{subscription?.status?.toUpperCase() ?? "INACTIVE"}</strong>
-          <Link href="/billing" className="muted" style={{ fontSize: "0.9rem" }}>
+          <Link href="/billing" className="card-link">
             Manage billing
           </Link>
         </article>
 
-        <article className="card" style={{ display: "grid", gap: 8 }}>
+        <article className="card status-card">
           <span className="muted">Radar status</span>
-          <strong>{settings?.radar_active ? "ACTIVE" : "INACTIVE"}</strong>
+          <strong>{settings?.radar_active ? "ACTIVE" : "PAUSED"}</strong>
+          <p className="muted">Last scan: {timeAgo(latestMatch?.created_at ?? null)}</p>
           <form action="/api/radar/toggle" method="post">
             <button className="btn" type="submit">
-              {settings?.radar_active ? "Pause Radar" : "Activate Radar"}
+              {settings?.radar_active ? "Pause radar" : "Activate radar"}
             </button>
           </form>
         </article>
 
-        <article className="card" style={{ display: "grid", gap: 4 }}>
-          <span className="muted">Missions this week</span>
-          <strong>{missionsThisWeek ?? 0}</strong>
-          <span className="muted" style={{ fontSize: "0.9rem" }}>
-            Renews {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "-"}
-          </span>
+        <article className="card status-card">
+          <span className="muted">Mission stats</span>
+          <strong>{missionsThisWeek ?? 0} missions this week</strong>
+          <span className="muted">Renews {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "-"}</span>
         </article>
       </section>
 
-      <section className="card" style={{ display: "grid", gap: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <h2 style={{ margin: 0 }}>Mission signals</h2>
-          <Link href="/app/settings" className="muted" style={{ fontSize: "0.9rem" }}>
+      <section className="card mission-section">
+        <div className="mission-section-header">
+          <h2>Mission Signals</h2>
+          <Link href="/app/settings" className="card-link">
             Settings
           </Link>
         </div>
