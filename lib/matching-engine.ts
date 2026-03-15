@@ -102,6 +102,10 @@ Rules:
 - forbidden phrases include: "I am passionate", "I would love the opportunity", "dynamic professional"
 - no markdown, no placeholders.`;
 
+type RunMatchingEngineOptions = {
+  userId?: string;
+};
+
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -373,9 +377,10 @@ async function makePitchWithOpenAI(
   return parsePitchJson(payload.output_text);
 }
 
-export async function runMatchingEngine() {
+export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) {
   const service = createSupabaseServiceClient();
   const runStarted = Date.now();
+  const scopedUserId = options.userId?.trim() || null;
 
   const { error: missionMatchesHealthError } = await service.from("mission_matches").select("id", { head: true, count: "exact" }).limit(1);
   if (missionMatchesHealthError) {
@@ -392,14 +397,20 @@ export async function runMatchingEngine() {
 
   const simulateUsers = env.SIMULATE_USERS || 0;
 
-  const { data: activeSubs, error: subError } = await service
-    .from("subscriptions")
-    .select("user_id")
-    .in("status", ["active", "trialing"]);
-  if (subError) throw new Error("matching_subscriptions_failed");
+  let eligibleUserIds: string[] = [];
+  if (scopedUserId) {
+    eligibleUserIds = [scopedUserId];
+    console.log(`[matching] scoped_run user_id=${scopedUserId}`);
+  } else {
+    const { data: activeSubs, error: subError } = await service
+      .from("subscriptions")
+      .select("user_id")
+      .in("status", ["active", "trialing"]);
+    if (subError) throw new Error("matching_subscriptions_failed");
+    eligibleUserIds = (activeSubs ?? []).map((sub) => sub.user_id);
+    console.log(`[matching] active_or_trialing_users count=${eligibleUserIds.length}`);
+  }
 
-  const eligibleUserIds = (activeSubs ?? []).map((sub) => sub.user_id);
-  console.log(`[matching] active_or_trialing_users count=${eligibleUserIds.length}`);
   if (!eligibleUserIds.length) {
     return { users: 0, createdMissions: 0, queuedNotifications: 0, aiCalls: 0, aiEstimatedTokens: 0 };
   }
@@ -414,8 +425,27 @@ export async function runMatchingEngine() {
   if (usersError) throw new Error("matching_users_failed");
 
   const runUsers = ((users ?? []) as UserSettingsRow[]);
-  const scopedUsers = simulateUsers > 0 ? runUsers.slice(0, Math.max(0, Math.floor(simulateUsers))) : runUsers;
+  const scopedUsers = scopedUserId
+    ? runUsers
+    : simulateUsers > 0
+      ? runUsers.slice(0, Math.max(0, Math.floor(simulateUsers)))
+      : runUsers;
   console.log(`[matching] radar_enabled_eligible_users count=${scopedUsers.length} simulate_users=${simulateUsers}`);
+
+  if (!scopedUsers.length) {
+    return {
+      users: 0,
+      usersProcessed: 0,
+      createdMissions: 0,
+      queuedNotifications: 0,
+      aiCalls: 0,
+      aiEstimatedTokens: 0,
+      avgAiCallsPerUser: 0,
+      limits: { maxPerUser: MAX_OFFERS_PER_USER, maxTotal: MAX_OFFERS_TOTAL, maxAiCallsPerRun: aiBudget.maxCalls },
+      simulation: false,
+      durationMs: Date.now() - runStarted,
+    };
+  }
 
   const { data: profiles } = await service.from("profiles").select("user_id, email").in(
     "user_id",
@@ -727,7 +757,11 @@ export async function runMatchingEngine() {
     aiEstimatedTokens: aiBudget.estimatedTokens,
     avgAiCallsPerUser,
     limits: { maxPerUser: MAX_OFFERS_PER_USER, maxTotal: MAX_OFFERS_TOTAL, maxAiCallsPerRun: aiBudget.maxCalls },
-    simulation: simulateUsers > 0,
+    simulation: !scopedUserId && simulateUsers > 0,
     durationMs,
   };
+}
+
+export async function runMatchingForUser(userId: string) {
+  return runMatchingEngine({ userId });
 }
