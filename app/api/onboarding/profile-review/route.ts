@@ -3,6 +3,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/server-auth";
 import { type CandidateProfile, type CandidateRemotePreference } from "@/types/candidate-profile";
 import { isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
+import { runMatchingForUser } from "@/lib/matching-engine";
 
 function csvToList(value: FormDataEntryValue | null, maxItems: number) {
   return String(value ?? "")
@@ -113,6 +114,15 @@ export async function POST(request: Request) {
 
   if (profileError || settingsError) {
     return NextResponse.redirect(new URL("/app/onboarding/profile-review?notice=error", request.url), { status: 303 });
+  }
+
+  try {
+    await runMatchingForUser(user.id);
+  } catch (error) {
+    console.error("[onboarding] instant_user_matching_failed", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return NextResponse.redirect(new URL("/app/dashboard?notice=profile-confirmed", request.url), { status: 303 });
