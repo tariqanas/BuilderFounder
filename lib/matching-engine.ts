@@ -202,9 +202,27 @@ function weekWindowParis() {
 
 function parseScoreJson(raw: string): ScoreResult | null {
   try {
-    const parsed = JSON.parse(raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "")) as Partial<
-      ScoreResult
-    >;
+    const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/, "").trim();
+    const start = cleaned.indexOf("{");
+    if (start < 0) return null;
+
+    let depth = 0;
+    let end = -1;
+    for (let i = start; i < cleaned.length; i += 1) {
+      const char = cleaned[i];
+      if (char === "{") depth += 1;
+      if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+
+    if (end < 0) return null;
+
+    const parsed = JSON.parse(cleaned.slice(start, end + 1)) as Partial<ScoreResult>;
     if (typeof parsed.score !== "number") return null;
     if (parsed.decision !== "KEEP" && parsed.decision !== "DROP") return null;
     if (!Array.isArray(parsed.reasons) || !Array.isArray(parsed.missing)) return null;
@@ -713,7 +731,6 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
           day_rate: mission.offer.day_rate,
           url: mission.offer.url,
           score: mission.score,
-          decision: mission.decision,
           reasons: mission.reasons,
           pitch: mission.pitch,
         })
