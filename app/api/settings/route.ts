@@ -3,6 +3,32 @@ import { createSupabaseServiceClient } from "@/lib/supabase";
 import { isE164Phone, isNonEmptyString, toInt } from "@/lib/validators";
 import { requireUser } from "@/lib/server-auth";
 
+export async function PATCH(request: Request) {
+  const { user } = await requireUser();
+  const service = createSupabaseServiceClient();
+
+  const body = (await request.json().catch(() => ({}))) as { notificationsEnabled?: unknown };
+  if (typeof body.notificationsEnabled !== "boolean") {
+    return NextResponse.json({ ok: false, error: "Invalid notifications setting" }, { status: 400 });
+  }
+
+  const { error } = await service
+    .from("user_settings")
+    .upsert(
+      {
+        user_id: user.id,
+        notifications_enabled: body.notificationsEnabled,
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: "Failed to update notifications" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, notificationsEnabled: body.notificationsEnabled });
+}
+
 export async function POST(request: Request) {
   const { user } = await requireUser();
   const service = createSupabaseServiceClient();

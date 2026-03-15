@@ -11,6 +11,7 @@ import {
   isPitchUsable,
   toMissionReasons,
 } from "@/lib/mission-utils";
+import { NotificationsToggle } from "@/components/dashboard/notifications-toggle";
 
 const timeAgo = (value: string | null) => {
   if (!value) return "No scan yet";
@@ -41,7 +42,7 @@ export default async function DashboardPage({
 
   const { data: settings } = await supabase
     .from("user_settings")
-    .select("radar_active,primary_stack,secondary_stack")
+    .select("primary_stack,secondary_stack,notifications_enabled")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -110,9 +111,6 @@ export default async function DashboardPage({
     <main className="dashboard-layout">
       {searchParams?.notice === "onboarding-activated" && <p className="notice">Success. Radar is now active.</p>}
       {searchParams?.notice === "profile-confirmed" && <p className="notice">Profile confirmed. Welcome to your dashboard.</p>}
-      {searchParams?.notice === "radar-activated" && <p className="notice">Radar activated.</p>}
-      {searchParams?.notice === "radar-paused" && <p className="notice">Radar paused.</p>}
-      {searchParams?.notice === "radar-update-failed" && <p className="notice">Unable to update radar status right now.</p>}
       {searchParams?.notice === "cv-empty-text" && <p className="notice">CV saved, but no extractable text was detected in the PDF.</p>}
 
       <section className="status-grid">
@@ -125,14 +123,11 @@ export default async function DashboardPage({
         </article>
 
         <article className="card status-card">
-          <span className="muted">Radar status</span>
-          <strong>{settings?.radar_active ? "ACTIVE" : "PAUSED"}</strong>
+          <span className="muted">Notifications</span>
+          <strong>{settings?.notifications_enabled ?? true ? "ON" : "OFF"}</strong>
           <p className="muted">Last scan: {timeAgo(latestMatch?.created_at ?? null)}</p>
-          <form action="/api/radar/toggle" method="post">
-            <button className="btn" type="submit">
-              {settings?.radar_active ? "Pause radar" : "Activate radar"}
-            </button>
-          </form>
+          <NotificationsToggle initialEnabled={settings?.notifications_enabled ?? true} />
+          <p className="muted">Receive alerts when new matching missions are detected.</p>
         </article>
 
         <article className="card status-card">

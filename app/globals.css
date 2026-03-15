@@ -306,3 +306,67 @@ label {
     transform: translateX(100%);
   }
 }
+
+.notifications-toggle-wrap {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.notifications-toggle {
+  width: fit-content;
+  border: 1px solid #2e3550;
+  border-radius: 999px;
+  padding: 0.35rem 0.5rem;
+  background: rgba(15, 18, 31, 0.95);
+  color: #d7def7;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+}
+
+.notifications-toggle:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.notifications-toggle-track {
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  position: relative;
+  border: 1px solid #33406a;
+  background: #1a2139;
+  transition: background 0.2s ease;
+}
+
+.notifications-toggle-track[data-enabled="true"] {
+  background: linear-gradient(120deg, #3667ff, #6d4eff);
+  border-color: #496df0;
+}
+
+.notifications-toggle-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.notifications-toggle-thumb[data-enabled="true"] {
+  transform: translateX(18px);
+}
+
+.notifications-toggle-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.notifications-toggle-error {
+  margin: 0;
+  color: #ff9da8;
+}
