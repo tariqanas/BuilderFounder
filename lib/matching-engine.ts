@@ -1,7 +1,6 @@
 import { env } from "@/lib/env";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { buildMissionEmail } from "@/lib/notification-template";
-import { buildFallbackPitch, cleanMissionText, toMissionReasons } from "@/lib/mission-utils";
 import { resolveMatchScoreThreshold } from "@/lib/matching-config";
 import { upsertMissionMatch } from "@/lib/mission-matching-v1";
 
@@ -374,22 +373,6 @@ async function makePitchWithOpenAI(
   return parsePitchJson(payload.output_text);
 }
 
-function makePitchFallback(offer: OfferRow, reasons: string[], user: UserSettingsRow, candidateProfile: CandidateProfileSnapshot | null) {
-  const cleanTitle = cleanMissionText(offer.title, "mission");
-  const cleanCompany = cleanMissionText(offer.company, "company");
-  const reasonList = reasons.length ? reasons : toMissionReasons(offer.description);
-  return {
-    subject: `${cleanTitle} — technical fit`,
-    pitch: buildFallbackPitch({
-      title: cleanTitle,
-      company: cleanCompany,
-      reasons: reasonList,
-      primaryStack: user.primary_stack ?? candidateProfile?.primary_stack?.[0] ?? "",
-      secondaryStack: user.secondary_stack,
-    }),
-  };
-}
-
 export async function runMatchingEngine() {
   const service = createSupabaseServiceClient();
   const runStarted = Date.now();
@@ -559,7 +542,8 @@ export async function runMatchingEngine() {
       const finalScore = aiScore;
 
       const aiPitch = await makePitchWithOpenAI(offer, finalScore, user, cvText, aiBudget);
-      const pitch = aiPitch ?? makePitchFallback(offer, finalScore.reasons, user, candidateProfile);
+      const subject = aiPitch?.subject ?? null;
+      const pitch = aiPitch?.pitch ?? null;
       await service.from("user_offer_scores").upsert(
         {
           user_id: user.user_id,
@@ -568,8 +552,8 @@ export async function runMatchingEngine() {
           decision: finalScore.decision,
           reasons: finalScore.reasons.join(" | "),
           missing: finalScore.missing.join(" | "),
-          subject: pitch.subject,
-          pitch: pitch.pitch,
+          subject,
+          pitch,
         },
         { onConflict: "user_id,offer_hash" }
       );
@@ -579,8 +563,8 @@ export async function runMatchingEngine() {
         score: finalScore.score,
         decision: finalScore.decision,
         reasons: finalScore.reasons.join(" | "),
-        subject: pitch.subject,
-        pitch: pitch.pitch,
+        subject: subject ?? "",
+        pitch: pitch ?? "",
       });
     }
 
