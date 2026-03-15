@@ -251,6 +251,16 @@ export async function POST(request: Request) {
 
       if (missionError || !insertedMission) continue;
 
+      await service.from("mission_matches").upsert(
+        {
+          user_id: user.user_id,
+          mission_id: insertedMission.id,
+          score: item.score,
+          reasons: item.reasons,
+        },
+        { onConflict: "user_id,mission_id" }
+      );
+
       missionsInserted += 1;
       existingUrls.add(item.offer.url);
 
