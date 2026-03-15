@@ -300,9 +300,11 @@ async function scoreWithOpenAI(
       return null;
     }
 
-    const payload = (await response.json()) as { output_text?: string };
+    const payload = (await response.json()) as { output_text?: string; output?: unknown };
     if (!payload.output_text) {
-      console.error("[matching] ai_empty_output_text");
+      console.error(
+        `[matching] ai_empty_output_text status=${response.status} status_text=${response.statusText} offer_hash=${offer.hash} user_id=${user.user_id} payload=${JSON.stringify(payload)} output=${JSON.stringify(payload.output)}`
+      );
       return null;
     }
 
