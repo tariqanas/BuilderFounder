@@ -400,7 +400,24 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
   let eligibleUserIds: string[] = [];
   if (scopedUserId) {
     eligibleUserIds = [scopedUserId];
-    console.log(`[matching] scoped_run user_id=${scopedUserId}`);
+    console.log(`[matching] scoped_run_started user_id=${scopedUserId}`);
+
+    const { data: scopedUserSettingsRow, error: scopedUserSettingsError } = await service
+      .from("user_settings")
+      .select("user_id, radar_active")
+      .eq("user_id", scopedUserId)
+      .maybeSingle();
+
+    if (scopedUserSettingsError) {
+      console.error(
+        `[matching] user_settings_lookup_failed user_id=${scopedUserId} error=${JSON.stringify(scopedUserSettingsError)}`
+      );
+    } else {
+      const scopedSettings = scopedUserSettingsRow as { user_id: string; radar_active: boolean | null } | null;
+      console.log(
+        `[matching] user_settings_lookup user_id=${scopedUserId} exists=${scopedSettings ? "true" : "false"} radar_active=${scopedSettings?.radar_active ?? "null"}`
+      );
+    }
   } else {
     const { data: activeSubs, error: subError } = await service
       .from("subscriptions")
@@ -490,6 +507,7 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
     .order("posted_at", { ascending: false, nullsFirst: false })
     .limit(500);
   if (offerError) throw new Error("matching_offers_failed");
+  console.log(`[matching] offers_raw_loaded count=${(offerPool ?? []).length}`);
 
   let remainingGlobalCap = MAX_OFFERS_TOTAL;
   let createdMissions = 0;
@@ -503,12 +521,32 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
     }
 
     const candidateProfile = candidateProfileByUserId.get(user.user_id) ?? null;
+    const cvText = cvByUserId.get(user.user_id) ?? null;
+    console.log(
+      `[matching] user_profile_snapshot user_id=${user.user_id} candidate_profile_found=${candidateProfile ? "true" : "false"} cv_text_found=${cvText ? "true" : "false"}`
+    );
+
+    const offersLoaded = (offerPool ?? []).length;
     const stacks = resolvePrimaryStacks(user, candidateProfile);
     const preFiltered = deterministicPreFilter(user, (offerPool ?? []) as OfferRow[], candidateProfile);
+    const offersAfterPreFilter = preFiltered.length;
+    const offersRejectedBeforeScoring = Math.max(0, offersLoaded - offersAfterPreFilter);
+    console.log(
+      `[matching] prefilter_summary user_id=${user.user_id} offers_loaded=${offersLoaded} offers_after_prefilter=${offersAfterPreFilter} offers_rejected_before_scoring=${offersRejectedBeforeScoring}`
+    );
+
     const candidates = preFiltered.slice(0, Math.min(MAX_OFFERS_PER_USER, remainingGlobalCap));
     remainingGlobalCap -= candidates.length;
 
+    let offersSentToScoreWithOpenAI = 0;
+    let userOfferScoresUpserted = 0;
+    let missionsInsertedForUser = 0;
+    let missionMatchesInsertedForUser = 0;
+
     if (!candidates.length) {
+      console.log(
+        `[matching] user_summary user_id=${user.user_id} offers_loaded=${offersLoaded} offers_after_prefilter=${offersAfterPreFilter} offers_rejected_before_scoring=${offersRejectedBeforeScoring} sent_this_week=0 slots_left=${WEEKLY_MAX_MISSIONS} offers_sent_to_score_with_openai=${offersSentToScoreWithOpenAI} user_offer_scores_upserted=${userOfferScoresUpserted} missions_inserted=${missionsInsertedForUser} mission_matches_inserted=${missionMatchesInsertedForUser} selected_after_scoring=0`
+      );
       usersProcessed += 1;
       continue;
     }
@@ -522,8 +560,14 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
       .lt("created_at", window.end);
 
     const sentThisWeek = currentWeekMissions?.length ?? 0;
+    const slotsLeft = Math.max(0, WEEKLY_MAX_MISSIONS - sentThisWeek);
+    console.log(`[matching] weekly_cap_status user_id=${user.user_id} sent_this_week=${sentThisWeek} slots_left=${slotsLeft}`);
+
     if (sentThisWeek >= WEEKLY_MAX_MISSIONS) {
       console.log(`[matching] skip_user_weekly_limit user_id=${user.user_id} sent_this_week=${sentThisWeek}`);
+      console.log(
+        `[matching] user_summary user_id=${user.user_id} offers_loaded=${offersLoaded} offers_after_prefilter=${offersAfterPreFilter} offers_rejected_before_scoring=${offersRejectedBeforeScoring} sent_this_week=${sentThisWeek} slots_left=${slotsLeft} offers_sent_to_score_with_openai=${offersSentToScoreWithOpenAI} user_offer_scores_upserted=${userOfferScoresUpserted} missions_inserted=${missionsInsertedForUser} mission_matches_inserted=${missionMatchesInsertedForUser} selected_after_scoring=0`
+      );
       usersProcessed += 1;
       continue;
     }
@@ -539,7 +583,6 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
     const cache = new Map((cacheRows ?? ([] as CachedScoreRow[])).map((row) => [row.offer_hash, row]));
 
     const scored: Array<{ offer: OfferRow; score: number; decision: "KEEP" | "DROP"; reasons: string; subject: string; pitch: string }> = [];
-    const cvText = cvByUserId.get(user.user_id) ?? null;
 
     for (const offer of candidates) {
       const cached = cache.get(offer.hash);
@@ -560,6 +603,7 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
         break;
       }
 
+      offersSentToScoreWithOpenAI += 1;
       const aiScore = await scoreWithOpenAI(offer, stacks, user, candidateProfile, cvText, aiBudget);
       if (aiBudget.currentCalls > aiBudget.maxCalls) {
         console.warn("[matching] ai_budget_exceeded_hard_stop");
@@ -587,6 +631,7 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
         },
         { onConflict: "user_id,offer_hash" }
       );
+      userOfferScoresUpserted += 1;
 
       scored.push({
         offer,
@@ -603,8 +648,16 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
       break;
     }
 
-    const slotsLeft = Math.max(0, WEEKLY_MAX_MISSIONS - sentThisWeek);
     if (slotsLeft === 0) {
+      console.log(
+        `[matching] scoring_metrics user_id=${user.user_id} offers_sent_to_score_with_openai=${offersSentToScoreWithOpenAI} user_offer_scores_upserted=${userOfferScoresUpserted}`
+      );
+      console.log(
+        `[matching] mission_creation_metrics user_id=${user.user_id} missions_inserted=${missionsInsertedForUser} mission_matches_inserted=${missionMatchesInsertedForUser}`
+      );
+      console.log(
+        `[matching] user_summary user_id=${user.user_id} offers_loaded=${offersLoaded} offers_after_prefilter=${offersAfterPreFilter} offers_rejected_before_scoring=${offersRejectedBeforeScoring} sent_this_week=${sentThisWeek} slots_left=${slotsLeft} offers_sent_to_score_with_openai=${offersSentToScoreWithOpenAI} user_offer_scores_upserted=${userOfferScoresUpserted} missions_inserted=${missionsInsertedForUser} mission_matches_inserted=${missionMatchesInsertedForUser} selected_after_scoring=0`
+      );
       usersProcessed += 1;
       continue;
     }
@@ -616,6 +669,10 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
       .filter((row) => row.score >= matchScoreThreshold || row.decision === "KEEP")
       .sort((a, b) => b.score - a.score)
       .slice(0, slotsLeft);
+
+    console.log(
+      `[matching] scoring_metrics user_id=${user.user_id} offers_sent_to_score_with_openai=${offersSentToScoreWithOpenAI} user_offer_scores_upserted=${userOfferScoresUpserted}`
+    );
 
     for (const mission of selected) {
       const { data: insertedMission, error: missionError } = await service
@@ -674,8 +731,10 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
         },
         candidateProfile,
       });
+      missionMatchesInsertedForUser += 1;
 
       createdMissions += 1;
+      missionsInsertedForUser += 1;
 
       await service
         .from("user_offer_scores")
@@ -737,6 +796,13 @@ export async function runMatchingEngine(options: RunMatchingEngineOptions = {}) 
         if (!queueError) queuedNotifications += 1;
       }
     }
+
+    console.log(
+      `[matching] mission_creation_metrics user_id=${user.user_id} missions_inserted=${missionsInsertedForUser} mission_matches_inserted=${missionMatchesInsertedForUser}`
+    );
+    console.log(
+      `[matching] user_summary user_id=${user.user_id} offers_loaded=${offersLoaded} offers_after_prefilter=${offersAfterPreFilter} offers_rejected_before_scoring=${offersRejectedBeforeScoring} sent_this_week=${sentThisWeek} slots_left=${slotsLeft} offers_sent_to_score_with_openai=${offersSentToScoreWithOpenAI} user_offer_scores_upserted=${userOfferScoresUpserted} missions_inserted=${missionsInsertedForUser} mission_matches_inserted=${missionMatchesInsertedForUser} selected_after_scoring=${selected.length}`
+    );
 
     usersProcessed += 1;
   }
