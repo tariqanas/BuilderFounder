@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type MissionItem = {
   id: string;
@@ -11,6 +11,28 @@ type MissionItem = {
   url: string;
   hasValidUrl: boolean;
   reasons: string[];
+  createdAt: string;
+  country: string;
+  remote: string;
+  dayRate: number | null;
+};
+
+const scoreTier = (score: number) => {
+  if (score >= 90) return { label: "Perfect match", tone: "badge-success" };
+  if (score >= 80) return { label: "Strong match", tone: "badge-info" };
+  return { label: "Good match", tone: "badge-warning" };
+};
+
+const reasonToChip = (reason: string) => {
+  const cleanReason = reason.trim();
+  const lower = cleanReason.toLowerCase();
+
+  if (lower.includes("stack") || lower.includes("tech") || lower.includes("skill")) return "Stack match";
+  if (lower.includes("remote")) return "Remote";
+  if (lower.includes("country") || lower.includes("location") || lower.includes("france")) return "Country";
+  if (lower.includes("rate") || lower.includes("budget") || lower.includes("day")) return "Rate";
+
+  return cleanReason.length > 22 ? `${cleanReason.slice(0, 22)}…` : cleanReason;
 };
 
 export function MissionList({ missions }: { missions: MissionItem[] }) {
@@ -26,64 +48,72 @@ export function MissionList({ missions }: { missions: MissionItem[] }) {
     setTimeout(() => setToast(null), 1800);
   };
 
-  if (!missions.length) {
+  const sortedMissions = useMemo(() => [...missions].sort((a, b) => b.score - a.score), [missions]);
+
+  if (!sortedMissions.length) {
     return (
-      <div className="card" style={{ background: "#0f0f18" }}>
-        <p className="muted" style={{ margin: 0 }}>
-          Radar active. Waiting for signals…
-        </p>
+      <div className="empty-state">
+        <p>No missions detected yet.</p>
+        <p className="muted">Your radar is active and scanning freelance markets.</p>
+        <p className="muted">New mission signals will appear automatically.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      {toast && (
-        <p className="badge" style={{ width: "fit-content", margin: 0 }}>
-          {toast}
-        </p>
-      )}
-      {missions.map((m) => (
-        <article key={m.id} className="card" style={{ background: "#0f0f18", display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-            <h3 style={{ margin: 0, fontSize: "1.02rem" }}>{m.title}</h3>
-            <span className="badge">Score {m.score}%</span>
-          </div>
+    <div className="mission-grid">
+      {toast && <p className="badge badge-info toast-badge">{toast}</p>}
+      {sortedMissions.map((mission) => {
+        const missionTier = scoreTier(mission.score);
+        const isNew = Date.now() - new Date(mission.createdAt).getTime() <= 24 * 60 * 60 * 1000;
+        const locationText = `${mission.country || "Global"} • ${mission.remote || "Remote"}`;
+        const reasonChips = (mission.reasons.length ? mission.reasons : ["Stack match", "Remote", "Country", "Rate"])
+          .map(reasonToChip)
+          .slice(0, 4);
 
-          <p className="muted" style={{ margin: 0 }}>
-            {m.company}
-          </p>
+        return (
+          <article key={mission.id} className="mission-card">
+            <div className="mission-header">
+              <div>
+                <h3>{mission.title}</h3>
+                <p className="muted mission-company">{mission.company}</p>
+              </div>
+              <div className="mission-badges">
+                <span className={`badge ${missionTier.tone}`}>{`${missionTier.label} • Score ${mission.score}`}</span>
+                {isNew ? <span className="badge badge-new">NEW</span> : null}
+              </div>
+            </div>
 
-          <div>
-            <strong style={{ fontSize: "0.9rem" }}>Why it matches</strong>
-            <ul className="muted" style={{ margin: "0.4rem 0 0", paddingLeft: "1rem" }}>
-              {(m.reasons.length ? m.reasons : ["Strong stack and mission fit"]).slice(0, 3).map((reason, index) => (
-                <li key={`${m.id}-${index}`}>{reason}</li>
+            <div className="mission-meta">
+              <span className="muted">{locationText}</span>
+              <span>{mission.dayRate ? `${mission.dayRate}€/day` : "Rate not specified"}</span>
+            </div>
+
+            <div className="chip-row">
+              {reasonChips.map((chip, index) => (
+                <span key={`${mission.id}-${chip}-${index}`} className="chip">
+                  {chip}
+                </span>
               ))}
-            </ul>
-          </div>
+            </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {m.hasValidUrl ? (
-              <a className="btn" href={m.url} target="_blank" rel="noreferrer noopener">
-                Open offer
-              </a>
-            ) : (
-              <span
-                className="btn"
-                aria-disabled="true"
-                title="Offer link unavailable"
-                style={{ opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" }}
-              >
-                Open offer
-              </span>
-            )}
-            <button className="btn" onClick={() => copyPitch(m.pitch ?? "")}>
-              Copy pitch
-            </button>
-          </div>
-        </article>
-      ))}
+            <div className="mission-actions">
+              {mission.hasValidUrl ? (
+                <a className="btn btn-primary" href={mission.url} target="_blank" rel="noreferrer noopener">
+                  Open mission
+                </a>
+              ) : (
+                <span className="btn btn-primary" aria-disabled="true" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                  Open mission
+                </span>
+              )}
+              <button className="btn" onClick={() => copyPitch(mission.pitch ?? "")}>
+                Copy pitch
+              </button>
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

@@ -9,8 +9,8 @@
 body {
   margin: 0;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  background: radial-gradient(circle at top, #151528 0%, #0a0a0f 45%);
-  color: #f5f5f5;
+  background: radial-gradient(circle at 10% 0%, #171a2c 0%, #0b0d14 46%, #08090f 100%);
+  color: #f5f7ff;
 }
 
 a {
@@ -19,53 +19,118 @@ a {
 }
 
 .container {
-  max-width: 1040px;
+  max-width: 1140px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
 
+.app-shell {
+  display: grid;
+  gap: 1rem;
+}
+
 .card {
-  background: rgba(18, 18, 26, 0.92);
-  border: 1px solid #2a2a3d;
-  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(22, 24, 36, 0.95) 0%, rgba(12, 14, 23, 0.96) 100%);
+  border: 1px solid #25283c;
+  border-radius: 16px;
   padding: 1rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.brand-mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #4f7cff, #875cff);
+  box-shadow: 0 0 18px rgba(79, 124, 255, 0.75);
+}
+
+.top-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #b8bfd7;
+}
+
+.top-nav-links a:hover {
+  color: #ffffff;
 }
 
 .muted {
-  color: #b7b7c9;
+  color: #9ea6c1;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #3b3b50;
+  border: 1px solid #343a56;
   border-radius: 999px;
-  padding: 0.2rem 0.7rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge-success {
+  border-color: #205f46;
+  background: rgba(41, 119, 87, 0.2);
+  color: #8ff2c9;
+}
+
+.badge-info {
+  border-color: #2d4d8f;
+  background: rgba(58, 94, 167, 0.2);
+  color: #9fc3ff;
+}
+
+.badge-warning {
+  border-color: #7d4f1e;
+  background: rgba(159, 97, 35, 0.2);
+  color: #ffc582;
+}
+
+.badge-new {
+  border-color: #8b6d17;
+  color: #ffe496;
+  background: rgba(139, 109, 23, 0.23);
 }
 
 .btn {
-  border: 1px solid #34344a;
-  background: #181826;
+  border: 1px solid #343c5b;
+  background: #161a2b;
   color: #fff;
-  padding: 0.65rem 1rem;
+  padding: 0.62rem 0.95rem;
   border-radius: 10px;
   cursor: pointer;
   font: inherit;
+  transition: all 0.18s ease;
 }
 
 .btn:hover {
-  border-color: #515173;
+  border-color: #4b5f99;
+  transform: translateY(-1px);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #5c5cff, #6f4bff);
-  border: none;
+  background: linear-gradient(135deg, #3f6dff, #6b4cff);
+  border: 1px solid transparent;
 }
 
 .btn-primary:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.08);
 }
 
 input,
@@ -89,4 +154,155 @@ label {
   display: block;
   font-size: 0.9rem;
   margin-bottom: 0.4rem;
+}
+
+.dashboard-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.notice {
+  margin: 0;
+  border: 1px solid #33416f;
+  background: rgba(37, 54, 102, 0.25);
+  color: #adc4ff;
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.8rem;
+}
+
+.status-card {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.card-link {
+  font-size: 0.86rem;
+  color: #9eb3ff;
+}
+
+.mission-section {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.mission-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mission-section-header h2 {
+  margin: 0;
+}
+
+.mission-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mission-card {
+  border: 1px solid #252d45;
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: rgba(12, 16, 27, 0.95);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.mission-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mission-company {
+  margin: 0.3rem 0 0;
+}
+
+.mission-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.mission-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.92rem;
+}
+
+.chip-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  border-radius: 999px;
+  border: 1px solid #2f395d;
+  background: rgba(40, 51, 90, 0.2);
+  color: #b8c8f8;
+  font-size: 0.76rem;
+  padding: 0.2rem 0.65rem;
+}
+
+.mission-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  border: 1px dashed #364167;
+  border-radius: 14px;
+  padding: 1.3rem;
+  background: rgba(19, 22, 36, 0.6);
+}
+
+.empty-state p {
+  margin: 0.15rem 0;
+}
+
+.toast-badge {
+  width: fit-content;
+  margin: 0;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(29, 33, 49, 0.85);
+  border: 1px solid #2a3149;
+  border-radius: 14px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.07), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
