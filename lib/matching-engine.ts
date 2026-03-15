@@ -150,8 +150,16 @@ function nonEmpty(value: string | null | undefined) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function explodeStackInput(stack: string | null | undefined) {
+  if (!nonEmpty(stack)) return [] as string[];
+  return String(stack)
+    .split(/[;,|/]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function resolvePrimaryStacks(user: UserSettingsRow, candidateProfile: CandidateProfileSnapshot | null) {
-  const settingsStacks = [user.primary_stack, user.secondary_stack].filter(nonEmpty).map((stack) => String(stack).trim());
+  const settingsStacks = [user.primary_stack, user.secondary_stack].flatMap((stack) => explodeStackInput(stack));
   const cvStacks = (candidateProfile?.primary_stack ?? []).filter(nonEmpty).map((stack) => String(stack).trim());
   return [...new Set([...settingsStacks, ...cvStacks])];
 }
