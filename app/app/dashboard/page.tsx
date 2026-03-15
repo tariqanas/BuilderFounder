@@ -3,7 +3,6 @@ import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
 import { getOnboardingRedirectPath, getOnboardingState } from "@/lib/onboarding-state";
 import { redirect } from "next/navigation";
 import { MissionList } from "@/components/mission-list";
-import { resolveMatchScoreThreshold } from "@/lib/matching-config";
 import {
   buildFallbackPitch,
   cleanMissionText,
@@ -67,13 +66,10 @@ export default async function DashboardPage({
     .limit(1)
     .maybeSingle();
 
-  const matchScoreThreshold = resolveMatchScoreThreshold(undefined);
-
   const { data: matchesData } = await supabase
     .from("mission_matches")
-    .select("score,reasons,mission_id,missions(id,title,company,country,remote,day_rate,url,pitch,reasons,created_at)")
+    .select("score,reasons,mission_id,missions(id,title,company,country,remote,day_rate,url,pitch,reasons,score,created_at)")
     .eq("user_id", user.id)
-    .gte("score", matchScoreThreshold)
     .order("score", { ascending: false })
     .limit(20);
 
@@ -86,7 +82,7 @@ export default async function DashboardPage({
         id: mission.id,
         title: cleanMissionText(mission.title, "Untitled mission"),
         company: cleanMissionText(mission.company, "Unknown company"),
-        score: Number(match.score ?? 0),
+        score: Number(mission.score ?? match.score ?? 0),
         pitch: isPitchUsable(mission.pitch)
           ? mission.pitch
           : buildFallbackPitch({
