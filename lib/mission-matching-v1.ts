@@ -58,6 +58,14 @@ function uniq(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
+function explodeStackInput(stack: string | null | undefined) {
+  if (!stack) return [] as string[];
+  return String(stack)
+    .split(/[;,|/]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function includesKeyword(text: string, keyword: string) {
   const normalizedKeyword = normalize(keyword);
   if (!normalizedKeyword) return false;
@@ -178,7 +186,11 @@ export function scoreMissionMatch(params: {
   const domains = overlapScore(missionText, candidateProfile?.domains ?? [], WEIGHTS.domains);
   const primaryStack = overlapScore(
     missionText,
-    uniq([settings.primary_stack ?? "", settings.secondary_stack ?? "", ...(candidateProfile?.primary_stack ?? [])]),
+    uniq([
+      ...explodeStackInput(settings.primary_stack),
+      ...explodeStackInput(settings.secondary_stack),
+      ...(candidateProfile?.primary_stack ?? []),
+    ]),
     WEIGHTS.primary_stack
   );
 
