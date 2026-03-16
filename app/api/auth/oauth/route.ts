@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-type OAuthProvider = "google" | "apple";
+type OAuthProvider = "google";
 
 function readRequiredEnv(names: string[]) {
   for (const name of names) {
@@ -21,7 +21,7 @@ function createSupabaseAuthClient() {
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { provider?: OAuthProvider } | null;
-  if (body?.provider !== "google" && body?.provider !== "apple") {
+  if (body?.provider !== "google") {
     return NextResponse.json({ error: "Unsupported OAuth provider" }, { status: 400 });
   }
 
