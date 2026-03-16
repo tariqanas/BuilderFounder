@@ -28,14 +28,6 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
-  return (
-    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M16.6 12.8c0-2.2 1.8-3.2 1.9-3.3-1-1.5-2.6-1.7-3.1-1.7-1.3-.1-2.5.8-3.2.8-.6 0-1.6-.8-2.7-.8-1.4 0-2.7.8-3.4 2-.8 1.4-.2 3.5.6 4.6.4.6.9 1.3 1.6 1.3.7 0 .9-.4 1.8-.4.8 0 1.1.4 1.8.4.7 0 1.2-.6 1.6-1.3.5-.8.7-1.6.7-1.6-.1 0-2-.8-2-3Zm-2-6.2c.4-.5.7-1.1.6-1.8-.6 0-1.3.4-1.8.9-.4.4-.7 1-.6 1.7.7.1 1.4-.3 1.8-.8Z" />
-    </svg>
-  );
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -43,7 +35,6 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [appleLoading, setAppleLoading] = useState(false);
 
   const submit = async (mode: "login" | "signup") => {
     if (!email || !password) {
@@ -97,26 +88,6 @@ export default function LoginPage() {
     window.location.assign(data.url);
   };
 
-  const onAppleSignIn = async () => {
-    setAppleLoading(true);
-    setError(null);
-
-    const response = await fetch("/api/auth/oauth", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ provider: "apple" }),
-    });
-    const data = (await response.json().catch(() => ({}))) as { error?: string; url?: string };
-
-    if (!response.ok || !data.url) {
-      setAppleLoading(false);
-      setError(getErrorMessage(data.error));
-      return;
-    }
-
-    window.location.assign(data.url);
-  };
-
   return (
     <main className="container" style={{ maxWidth: 460, minHeight: "70vh", display: "grid", alignItems: "center" }}>
       <div className="card" style={{ display: "grid", gap: 14, padding: "1.4rem" }}>
@@ -150,14 +121,14 @@ export default function LoginPage() {
             />
           </div>
           {error && <p style={{ color: "#ff8a8a", margin: 0 }}>{error}</p>}
-          <button type="submit" className="btn btn-primary" disabled={loading || googleLoading || appleLoading}>
+          <button type="submit" className="btn btn-primary" disabled={loading || googleLoading}>
             {loading ? "Please wait..." : "Sign in"}
           </button>
           <button
             type="button"
             className="btn"
             onClick={onGoogleSignIn}
-            disabled={loading || googleLoading || appleLoading}
+            disabled={loading || googleLoading}
             style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
             <GoogleIcon />
@@ -166,18 +137,8 @@ export default function LoginPage() {
           <button
             type="button"
             className="btn"
-            onClick={onAppleSignIn}
-            disabled={loading || googleLoading || appleLoading}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-          >
-            <AppleIcon />
-            {appleLoading ? "Redirecting..." : "Continue with Apple"}
-          </button>
-          <button
-            type="button"
-            className="btn"
             onClick={() => submit("signup")}
-            disabled={loading || googleLoading || appleLoading}
+            disabled={loading || googleLoading}
           >
             Create account
           </button>
