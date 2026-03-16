@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAppUrl } from "@/lib/app-url";
 
 type OAuthProvider = "google";
 
@@ -15,8 +16,24 @@ function createSupabaseAuthClient() {
   const supabaseUrl = readRequiredEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"]);
   const supabaseAnonKey = readRequiredEnv(["NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]);
   return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+    auth: { persistSession: false, autoRefreshToken: false, flowType: "pkce" },
   });
+}
+
+function getRequestOrigin(request: Request) {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim();
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.trim();
+  if (forwardedHost) {
+    return `${forwardedProto || "https"}://${forwardedHost}`;
+  }
+
+  const host = request.headers.get("host")?.trim();
+  if (host) {
+    const requestUrl = new URL(request.url);
+    return `${requestUrl.protocol}//${host}`;
+  }
+
+  return new URL(request.url).origin;
 }
 
 export async function POST(request: Request) {
@@ -25,8 +42,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported OAuth provider" }, { status: 400 });
   }
 
-  const requestUrl = new URL(request.url);
-  const redirectTo = `${requestUrl.origin}/auth/callback`;
+  const origin = getRequestOrigin(request);
+  const fallbackOrigin = getAppUrl();
+  const redirectBase = origin.includes("localhost") ? fallbackOrigin : origin;
+  const redirectTo = `${redirectBase}/auth/callback`;
 
   try {
     const supabase = createSupabaseAuthClient();
