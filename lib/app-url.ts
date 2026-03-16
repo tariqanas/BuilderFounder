@@ -17,3 +17,10 @@ export function getAppUrl() {
   return "http://localhost:3000";
 }
 
+export function getAppUrlFromRequest(requestUrl: string) {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configured) return normalizeUrl(configured);
+
+  const parsedRequestUrl = new URL(requestUrl);
+  return normalizeUrl(parsedRequestUrl.origin);
+}
