@@ -14,7 +14,7 @@ export function getAppUrl() {
   const vercelUrl = process.env.VERCEL_URL?.trim();
   if (vercelUrl) return normalizeUrl(`https://${vercelUrl}`);
 
-  return "http://localhost:3000";
+  return "http://localhosta:3000";
 }
 
 export function getAppUrlFromRequest(requestUrl: string) {
