@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase";
 
 const ERROR_MAP: Record<string, string> = {
   "Invalid login credentials": "Invalid email or password.",
@@ -82,40 +81,40 @@ export default function LoginPage() {
     setGoogleLoading(true);
     setError(null);
 
-    const supabase = createSupabaseBrowserClient();
-    const redirectTo = `${window.location.origin}/auth/callback`;
-
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo,
-      },
+    const response = await fetch("/api/auth/oauth", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider: "google" }),
     });
+    const data = (await response.json().catch(() => ({}))) as { error?: string; url?: string };
 
-    if (oauthError) {
+    if (!response.ok || !data.url) {
       setGoogleLoading(false);
-      setError(getErrorMessage(oauthError.message));
+      setError(getErrorMessage(data.error));
+      return;
     }
+
+    window.location.assign(data.url);
   };
 
   const onAppleSignIn = async () => {
     setAppleLoading(true);
     setError(null);
 
-    const supabase = createSupabaseBrowserClient();
-    const redirectTo = `${window.location.origin}/auth/callback`;
-
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: {
-        redirectTo,
-      },
+    const response = await fetch("/api/auth/oauth", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider: "apple" }),
     });
+    const data = (await response.json().catch(() => ({}))) as { error?: string; url?: string };
 
-    if (oauthError) {
+    if (!response.ok || !data.url) {
       setAppleLoading(false);
-      setError(getErrorMessage(oauthError.message));
+      setError(getErrorMessage(data.error));
+      return;
     }
+
+    window.location.assign(data.url);
   };
 
   return (
