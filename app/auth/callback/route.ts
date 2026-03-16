@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { authCookieName } from "@/lib/server-auth";
 
-function readRequiredEnv(name: string) {
-  const value = process.env[name];
-  if (!value || !value.trim()) {
-    throw new Error(`Missing required environment variable: ${name}`);
+function readRequiredEnv(names: string[]) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value && value.trim()) return value;
   }
-  return value;
+  throw new Error(`Missing required environment variable: ${names.join(" or ")}`);
 }
 
 export async function GET(request: Request) {
@@ -18,9 +18,13 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login?error=oauth-code-missing", request.url));
   }
 
-  const supabase = createClient(readRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"), readRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
+  const supabase = createClient(
+    readRequiredEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"]),
+    readRequiredEnv(["NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]),
+    {
     auth: { persistSession: false, autoRefreshToken: false },
-  });
+    },
+  );
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
