@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAppUrl } from "@/lib/app-url";
 
 type OAuthProvider = "google";
 
@@ -15,7 +16,7 @@ function createSupabaseAuthClient() {
   const supabaseUrl = readRequiredEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"]);
   const supabaseAnonKey = readRequiredEnv(["NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]);
   return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+    auth: { persistSession: false, autoRefreshToken: false, flowType: "pkce" },
   });
 }
 
@@ -25,8 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported OAuth provider" }, { status: 400 });
   }
 
-  const requestUrl = new URL(request.url);
-  const redirectTo = `${requestUrl.origin}/auth/callback`;
+  const redirectTo = `${getAppUrl()}/auth/callback`;
 
   try {
     const supabase = createSupabaseAuthClient();
