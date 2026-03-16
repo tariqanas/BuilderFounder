@@ -29,6 +29,14 @@ function GoogleIcon() {
   );
 }
 
+function AppleIcon() {
+  return (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16.6 12.8c0-2.2 1.8-3.2 1.9-3.3-1-1.5-2.6-1.7-3.1-1.7-1.3-.1-2.5.8-3.2.8-.6 0-1.6-.8-2.7-.8-1.4 0-2.7.8-3.4 2-.8 1.4-.2 3.5.6 4.6.4.6.9 1.3 1.6 1.3.7 0 .9-.4 1.8-.4.8 0 1.1.4 1.8.4.7 0 1.2-.6 1.6-1.3.5-.8.7-1.6.7-1.6-.1 0-2-.8-2-3Zm-2-6.2c.4-.5.7-1.1.6-1.8-.6 0-1.3.4-1.8.9-.4.4-.7 1-.6 1.7.7.1 1.4-.3 1.8-.8Z" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -36,6 +44,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   const submit = async (mode: "login" | "signup") => {
     if (!email || !password) {
@@ -89,6 +98,26 @@ export default function LoginPage() {
     }
   };
 
+  const onAppleSignIn = async () => {
+    setAppleLoading(true);
+    setError(null);
+
+    const supabase = createSupabaseBrowserClient();
+    const redirectTo = `${window.location.origin}/auth/callback`;
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: {
+        redirectTo,
+      },
+    });
+
+    if (oauthError) {
+      setAppleLoading(false);
+      setError(getErrorMessage(oauthError.message));
+    }
+  };
+
   return (
     <main className="container" style={{ maxWidth: 460, minHeight: "70vh", display: "grid", alignItems: "center" }}>
       <div className="card" style={{ display: "grid", gap: 14, padding: "1.4rem" }}>
@@ -96,17 +125,6 @@ export default function LoginPage() {
         <p className="muted" style={{ margin: 0 }}>
           Private beta. Secure access.
         </p>
-
-        <button
-          type="button"
-          className="btn"
-          onClick={onGoogleSignIn}
-          disabled={loading || googleLoading}
-          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-        >
-          <GoogleIcon />
-          {googleLoading ? "Redirecting..." : "Continue with Google"}
-        </button>
 
         <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
           <div>
@@ -133,10 +151,35 @@ export default function LoginPage() {
             />
           </div>
           {error && <p style={{ color: "#ff8a8a", margin: 0 }}>{error}</p>}
-          <button type="submit" className="btn btn-primary" disabled={loading || googleLoading}>
+          <button type="submit" className="btn btn-primary" disabled={loading || googleLoading || appleLoading}>
             {loading ? "Please wait..." : "Sign in"}
           </button>
-          <button type="button" className="btn" onClick={() => submit("signup")} disabled={loading || googleLoading}>
+          <button
+            type="button"
+            className="btn"
+            onClick={onGoogleSignIn}
+            disabled={loading || googleLoading || appleLoading}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <GoogleIcon />
+            {googleLoading ? "Redirecting..." : "Continue with Google"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={onAppleSignIn}
+            disabled={loading || googleLoading || appleLoading}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <AppleIcon />
+            {appleLoading ? "Redirecting..." : "Continue with Apple"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => submit("signup")}
+            disabled={loading || googleLoading || appleLoading}
+          >
             Create account
           </button>
         </form>
