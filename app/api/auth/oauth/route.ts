@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unsupported OAuth provider" }, { status: 400 });
   }
 
-  const redirectTo = `${getAppUrlFromRequest(request.url)}/auth/callback`;
+  const redirectTo = `${getAppUrlFromRequest(request)}/auth/callback`;
 
   try {
     const supabase = createSupabaseAuthClient();
