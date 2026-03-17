@@ -14,13 +14,19 @@ export function getAppUrl() {
   const vercelUrl = process.env.VERCEL_URL?.trim();
   if (vercelUrl) return normalizeUrl(`https://${vercelUrl}`);
 
-  return "http://localhosta:3000";
+  return "http://localhost:3000";
 }
 
-export function getAppUrlFromRequest(requestUrl: string) {
+export function getAppUrlFromRequest(request: Request) {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) return normalizeUrl(configured);
 
-  const parsedRequestUrl = new URL(requestUrl);
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim();
+  if (forwardedHost) {
+    const forwardedProto = request.headers.get("x-forwarded-proto")?.trim() || "https";
+    return normalizeUrl(`${forwardedProto}://${forwardedHost}`);
+  }
+
+  const parsedRequestUrl = new URL(request.url);
   return normalizeUrl(parsedRequestUrl.origin);
 }
