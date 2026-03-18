@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { getAppUrlFromRequest } from "@/lib/app-url";
 
 type OAuthProvider = "google";
@@ -13,10 +14,32 @@ function readRequiredEnv(names: string[]) {
 }
 
 function createSupabaseAuthClient() {
+  const cookieStore = cookies();
   const supabaseUrl = readRequiredEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"]);
   const supabaseAnonKey = readRequiredEnv(["NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]);
+
   return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false, autoRefreshToken: false, flowType: "pkce" },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      flowType: "pkce",
+      storageKey: "it-sniper-oauth",
+      storage: {
+        getItem: (key: string) => cookieStore.get(key)?.value ?? null,
+        setItem: (key: string, value: string) => {
+          cookieStore.set(key, value, {
+            path: "/",
+            httpOnly: true,
+            secure: true,
+            sameSite: "lax",
+            maxAge: 60 * 10,
+          });
+        },
+        removeItem: (key: string) => {
+          cookieStore.delete(key);
+        },
+      },
+    },
   });
 }
 
