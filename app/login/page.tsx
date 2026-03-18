@@ -1,18 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const ERROR_MAP: Record<string, string> = {
-  "Invalid login credentials": "Invalid email or password.",
-  "Email not confirmed": "Please confirm your email before signing in.",
-  "Email rate limit exceeded": "Too many attempts. Please wait a few minutes.",
-};
-
-function getErrorMessage(raw: string | null | undefined) {
-  if (!raw) return "Unable to sign in. Please try again.";
-  return ERROR_MAP[raw] ?? raw;
-}
+import { useI18n } from "@/components/i18n/i18n-provider";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 
 function GoogleIcon() {
   return (
@@ -29,6 +20,7 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,9 +28,23 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  const errorMap = useMemo(
+    () => ({
+      "Invalid login credentials": t("login.invalidCredentials"),
+      "Email not confirmed": t("login.emailNotConfirmed"),
+      "Email rate limit exceeded": t("login.rateLimit"),
+    }),
+    [t],
+  );
+
+  const getErrorMessage = (raw: string | null | undefined) => {
+    if (!raw) return t("login.defaultError");
+    return errorMap[raw as keyof typeof errorMap] ?? raw;
+  };
+
   const submit = async (mode: "login" | "signup") => {
     if (!email || !password) {
-      setError("Please enter your email and password.");
+      setError(t("login.missingCredentials"));
       return;
     }
 
@@ -91,38 +97,26 @@ export default function LoginPage() {
   return (
     <main className="container" style={{ maxWidth: 460, minHeight: "70vh", display: "grid", alignItems: "center" }}>
       <div className="card" style={{ display: "grid", gap: 14, padding: "1.4rem" }}>
-        <h1 style={{ marginBottom: 0 }}>IT Sniper access</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <h1 style={{ marginBottom: 0 }}>{t("login.title")}</h1>
+          <LanguageSwitcher />
+        </div>
         <p className="muted" style={{ margin: 0 }}>
-          Private beta. Secure access.
+          {t("login.subtitle")}
         </p>
 
         <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
           <div>
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              required
-            />
+            <label htmlFor="email">{t("common.email")}</label>
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required />
           </div>
           <div>
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              required
-            />
+            <label htmlFor="password">{t("common.password")}</label>
+            <input id="password" type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("login.passwordPlaceholder")} required />
           </div>
           {error && <p style={{ color: "#ff8a8a", margin: 0 }}>{error}</p>}
           <button type="submit" className="btn btn-primary" disabled={loading || googleLoading}>
-            {loading ? "Please wait..." : "Sign in"}
+            {loading ? t("login.loading") : t("login.signIn")}
           </button>
           <button
             type="button"
@@ -132,15 +126,10 @@ export default function LoginPage() {
             style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           >
             <GoogleIcon />
-            {googleLoading ? "Redirecting..." : "Continue with Google"}
+            {googleLoading ? t("login.redirecting") : t("login.withGoogle")}
           </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => submit("signup")}
-            disabled={loading || googleLoading}
-          >
-            Create account
+          <button type="button" className="btn" onClick={() => submit("signup")} disabled={loading || googleLoading}>
+            {t("login.createAccount")}
           </button>
         </form>
       </div>
