@@ -23,7 +23,7 @@ function createSupabaseAuthClient(request: NextRequest, pendingCookies: CookieTo
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet: CookieToSet[]) {
         pendingCookies.push(...cookiesToSet);
       },
     },
