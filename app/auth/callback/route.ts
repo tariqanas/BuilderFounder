@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { authCookieName } from "@/lib/server-auth";
 
 function readRequiredEnv(names: string[]) {
@@ -11,6 +12,7 @@ function readRequiredEnv(names: string[]) {
 }
 
 export async function GET(request: Request) {
+  const cookieStore = cookies();
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
 
@@ -22,7 +24,27 @@ export async function GET(request: Request) {
     readRequiredEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_URL"]),
     readRequiredEnv(["NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"]),
     {
-    auth: { persistSession: false, autoRefreshToken: false },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        flowType: "pkce",
+        storageKey: "it-sniper-oauth",
+        storage: {
+          getItem: (key: string) => cookieStore.get(key)?.value ?? null,
+          setItem: (key: string, value: string) => {
+            cookieStore.set(key, value, {
+              path: "/",
+              httpOnly: true,
+              secure: true,
+              sameSite: "lax",
+              maxAge: 60 * 10,
+            });
+          },
+          removeItem: (key: string) => {
+            cookieStore.delete(key);
+          },
+        },
+      },
     },
   );
 
