@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getServerT } from "@/lib/i18n/server";
+import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { getAccessToken } from "@/lib/server-auth";
 
@@ -82,6 +84,7 @@ const valuePoints = [
 
 export default async function LandingPage() {
   const ctaHref = await resolveStartCtaHref();
+  const { t } = await getServerT();
 
   return (
     <main
@@ -114,9 +117,7 @@ export default async function LandingPage() {
           <ItSniperLogo compact />
           <span style={{ fontWeight: 700, letterSpacing: "0.01em" }}>IT-Sniper</span>
         </div>
-        <Link href={ctaHref} className="btn btn-primary">
-          Get Started
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}><LanguageSwitcher /><Link href={ctaHref} className="btn btn-primary">{t("landing.cta")}</Link></div>
       </header>
 
       <section
@@ -129,23 +130,23 @@ export default async function LandingPage() {
       >
         <div style={{ display: "grid", gap: "1.1rem" }}>
           <div className="badge" style={{ width: "fit-content", borderColor: "#3159c7", color: "#b9ccff" }}>
-            AI FREELANCE MISSION RADAR
+            {t("landing.badge")}
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "0.9rem" }}>
             <ItSniperLogo />
             <h1 style={{ margin: 0, fontSize: "clamp(2rem,5vw,3.8rem)", lineHeight: 1.04, letterSpacing: "-0.03em" }}>
-              Stop searching for freelance missions.
+              {t("landing.heroTitle")}
             </h1>
           </div>
           <p className="muted" style={{ margin: 0, maxWidth: 640, fontSize: "1.07rem" }}>
-            IT-Sniper scans the market, scores the best opportunities, and gets you ready to apply in minutes.
+            {t("landing.heroDescription")}
           </p>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "0.3rem" }}>
             <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.76rem 1.2rem" }}>
-              Get my first missions
+              {t("landing.heroPrimary")}
             </Link>
             <a href="#how-it-works" className="btn" style={{ padding: "0.76rem 1.2rem" }}>
-              See how it works
+              {t("landing.heroSecondary")}
             </a>
           </div>
         </div>
@@ -160,8 +161,8 @@ export default async function LandingPage() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "center" }}>
-              <strong style={{ fontSize: "0.95rem" }}>Pipeline Overview</strong>
-              <span className="badge badge-success">+14 new missions</span>
+              <strong style={{ fontSize: "0.95rem" }}>{t("landing.pipelineOverview")}</strong>
+              <span className="badge badge-success">{t("landing.newMissions")}</span>
             </div>
             <div style={{ marginTop: "1rem", display: "grid", gap: "0.75rem" }}>
               {["Senior Platform Engineer", "Cloud Architect — FinOps", "Lead DevOps (Kubernetes)"]
@@ -200,18 +201,18 @@ export default async function LandingPage() {
             }}
           >
             <p style={{ margin: 0, color: "#9fb1ea", fontSize: "0.86rem", letterSpacing: "0.08em" }}>IT-SNIPER</p>
-            <p style={{ margin: "0.7rem 0 0", fontSize: "0.92rem", color: "#d5ddf7" }}>New mission detected</p>
+            <p style={{ margin: "0.7rem 0 0", fontSize: "0.92rem", color: "#d5ddf7" }}>{t("landing.missionDetected")}</p>
             <h3 style={{ margin: "0.3rem 0 0", fontSize: "1.1rem" }}>Senior Java AWS Engineer</h3>
             <div style={{ marginTop: "0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span className="badge badge-success">Score 87%</span>
-              <span className="badge">Open now</span>
+              <span className="badge">{t("landing.openNow")}</span>
             </div>
           </article>
         </div>
       </section>
 
       <section style={{ display: "grid", gap: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>Freelance search is broken for senior engineers.</h2>
+        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>{t("landing.searchBroken")}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: "0.9rem" }}>
           {painPoints.map((item) => (
             <article key={item} className="card" style={{ padding: "1.1rem", borderColor: "#2d2f43" }}>
@@ -222,12 +223,12 @@ export default async function LandingPage() {
       </section>
 
       <section id="how-it-works" style={{ display: "grid", gap: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>A precise flow from profile to mission in minutes.</h2>
+        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>{t("landing.flowTitle")}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: "0.85rem" }}>
           {solutionFlow.map((item, index) => (
             <article key={item.title} className="card" style={{ padding: "1.1rem", borderColor: "#263659" }}>
               <span className="badge" style={{ borderColor: "#344872", color: "#bfd0ff" }}>
-                Step {index + 1}
+                {t("landing.step")} {index + 1}
               </span>
               <h3 style={{ margin: "0.75rem 0 0.4rem" }}>{item.title}</h3>
               <p className="muted" style={{ margin: 0 }}>
@@ -240,12 +241,12 @@ export default async function LandingPage() {
 
       <section className="card" style={{ padding: "1.3rem", borderColor: "#2d4272", display: "grid", gap: "1rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>Inside the IT-Sniper command dashboard</h2>
-          <span className="badge badge-info">Live scoring engine</span>
+          <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>{t("landing.dashboardTitle")}</h2>
+          <span className="badge badge-info">{t("landing.liveScoring")}</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: "0.8rem" }}>
           <article style={{ border: "1px solid #27365c", borderRadius: 14, padding: "0.9rem", background: "#0c101d" }}>
-            <strong>Mission</strong>
+            <strong>{t("landing.mission")}</strong>
             <p className="muted" style={{ margin: "0.5rem 0 0" }}>
               Lead SRE — API scale-up / Paris remote-friendly
             </p>
@@ -255,7 +256,7 @@ export default async function LandingPage() {
             </div>
           </article>
           <article style={{ border: "1px solid #27365c", borderRadius: 14, padding: "0.9rem", background: "#0c101d" }}>
-            <strong>Why this fits</strong>
+            <strong>{t("landing.whyFits")}</strong>
             <ul className="muted" style={{ margin: "0.5rem 0 0", paddingLeft: "1.1rem", display: "grid", gap: "0.35rem" }}>
               <li>Exact Kubernetes + AWS stack overlap</li>
               <li>Daily rate match probability: high</li>
@@ -263,7 +264,7 @@ export default async function LandingPage() {
             </ul>
           </article>
           <article style={{ border: "1px solid #27365c", borderRadius: 14, padding: "0.9rem", background: "#0c101d" }}>
-            <strong>Generated pitch</strong>
+            <strong>{t("landing.generatedPitch")}</strong>
             <p className="muted" style={{ margin: "0.5rem 0 0" }}>
               Hi team — I recently led a container platform migration at comparable scale. I can help secure delivery in your
               first sprint.
@@ -273,7 +274,7 @@ export default async function LandingPage() {
       </section>
 
       <section style={{ display: "grid", gap: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>Why IT-Sniper feels like an unfair advantage</h2>
+        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>{t("landing.unfairAdvantage")}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0.8rem" }}>
           {valuePoints.map((point) => (
             <article key={point} className="card" style={{ padding: "1rem", borderColor: "#2e3c66" }}>
@@ -284,7 +285,7 @@ export default async function LandingPage() {
       </section>
 
       <section style={{ display: "grid", gap: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>Pricing</h2>
+        <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3vw,2rem)" }}>{t("landing.pricing")}</h2>
         <div style={{ display: "grid", gap: "0.9rem", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
           {[
             {
@@ -323,12 +324,12 @@ export default async function LandingPage() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: "0.6rem", alignItems: "center" }}>
                 <h3 style={{ margin: 0 }}>{plan.name}</h3>
-                {plan.featured ? <span className="badge badge-info">Recommended</span> : null}
+                {plan.featured ? <span className="badge badge-info">{t("landing.recommended")}</span> : null}
               </div>
               <p style={{ margin: "0.6rem 0 0", fontSize: "1.9rem", fontWeight: 700 }}>
                 {plan.price}
                 <span className="muted" style={{ fontSize: "0.95rem", fontWeight: 500 }}>
-                  /mo
+                  {t("landing.monthShort")}
                 </span>
               </p>
               <p className="muted" style={{ margin: "0.2rem 0 0" }}>
@@ -357,19 +358,19 @@ export default async function LandingPage() {
         }}
       >
         <h2 style={{ margin: 0, fontSize: "clamp(1.6rem,3vw,2.3rem)", maxWidth: 740 }}>
-          Your next freelance mission should find you first.
+          {t("landing.finalTitle")}
         </h2>
         <p className="muted" style={{ margin: 0, maxWidth: 580 }}>
-          Let the radar work for you while you focus on delivering great engineering.
+          {t("landing.finalDescription")}
         </p>
         <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.82rem 1.3rem" }}>
-          Start free
+          {t("landing.startFree")}
         </Link>
       </section>
 
       <footer style={{ padding: "0.5rem 0", color: "#8f97b7", display: "flex", justifyContent: "space-between", gap: "0.8rem", flexWrap: "wrap" }}>
         <span>© {new Date().getFullYear()} IT-Sniper</span>
-        <span>Precision AI for freelance engineers</span>
+        <span>{t("landing.footerTagline")}</span>
       </footer>
     </main>
   );
