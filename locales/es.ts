@@ -56,7 +56,7 @@ const es = {
     flowTitle: "Un flujo preciso del perfil a la misión en minutos.",
     step: "Paso",
     dashboardTitle: "Dentro del panel de control de IT-Sniper",
-    liveScoring: "Motor de puntuación en vivo",
+    liveScoring: "Motor de puntuación actualizado continuamente",
     mission: "Misión",
     whyFits: "Por qué encaja",
     generatedPitch: "Mensaje generado",

@@ -56,7 +56,7 @@ const fr = {
     flowTitle: "Un flux précis du profil à la mission en quelques minutes.",
     step: "Étape",
     dashboardTitle: "Dans le tableau de bord IT-Sniper",
-    liveScoring: "Moteur de scoring en direct",
+    liveScoring: "Moteur de scoring mis à jour en continu",
     mission: "Mission",
     whyFits: "Pourquoi ça correspond",
     generatedPitch: "Message généré",

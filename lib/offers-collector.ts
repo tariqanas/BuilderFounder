@@ -357,6 +357,130 @@ async function fetchWelcomeToTheJungleJobs(limitPerSource: number) {
   return normalizeJobPostingNodes(nodes, SOURCES.welcomeToTheJungle.source, limitPerSource);
 }
 
+
+
+type SourceHealthStatus = "up" | "down";
+
+export type SourceHealth = {
+  source: string;
+  status: SourceHealthStatus;
+  lastCheckedAt: string;
+  offersFetched: number;
+};
+
+async function fetchTextWithTimeout(url: string, timeoutMs: number) {
+  const response = await fetch(url, {
+    headers: { "user-agent": "BuilderFounderBot/1.0" },
+    next: { revalidate: 0 },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!response.ok) {
+    throw new Error(`fetch_failed:${response.status}:${url}`);
+  }
+
+  return response.text();
+}
+
+async function fetchJsonWithTimeout<T>(url: string, timeoutMs: number): Promise<T> {
+  const response = await fetch(url, {
+    headers: { "user-agent": "BuilderFounderBot/1.0" },
+    next: { revalidate: 0 },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+
+  if (!response.ok) {
+    throw new Error(`fetch_failed:${response.status}:${url}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function checkSourcesHealth(limitPerSource = 15): Promise<SourceHealth[]> {
+  const timeoutMs = 2500;
+  const checks: Array<{ source: string; run: () => Promise<number> }> = [
+    {
+      source: SOURCES.freeWork.source,
+      run: async () => {
+        const html = await fetchTextWithTimeout(SOURCES.freeWork.url, timeoutMs);
+        return parseFreeWorkJsonLd(html, limitPerSource).length;
+      },
+    },
+    {
+      source: SOURCES.malt.source,
+      run: async () => {
+        const html = await fetchTextWithTimeout(SOURCES.malt.url, timeoutMs);
+        return normalizeJobPostingNodes(extractJobPostingNodesFromHtml(html), SOURCES.malt.source, limitPerSource).length;
+      },
+    },
+    {
+      source: SOURCES.linkedInJobs.source,
+      run: async () => {
+        const html = await fetchTextWithTimeout(SOURCES.linkedInJobs.url, timeoutMs);
+        return normalizeJobPostingNodes(extractJobPostingNodesFromHtml(html), SOURCES.linkedInJobs.source, limitPerSource).length;
+      },
+    },
+    {
+      source: SOURCES.indeed.source,
+      run: async () => {
+        const html = await fetchTextWithTimeout(SOURCES.indeed.url, timeoutMs);
+        return normalizeJobPostingNodes(extractJobPostingNodesFromHtml(html), SOURCES.indeed.source, limitPerSource).length;
+      },
+    },
+    {
+      source: SOURCES.welcomeToTheJungle.source,
+      run: async () => {
+        const html = await fetchTextWithTimeout(SOURCES.welcomeToTheJungle.url, timeoutMs);
+        return normalizeJobPostingNodes(
+          extractJobPostingNodesFromHtml(html),
+          SOURCES.welcomeToTheJungle.source,
+          limitPerSource
+        ).length;
+      },
+    },
+    {
+      source: SOURCES.weWorkRemotely.source,
+      run: async () => {
+        const xml = await fetchTextWithTimeout(SOURCES.weWorkRemotely.rssUrl, timeoutMs);
+        return normalizeWeWorkRemotely(parseRssItems(xml), limitPerSource).length;
+      },
+    },
+    {
+      source: SOURCES.remoteOk.source,
+      run: async () => {
+        const json = await fetchJsonWithTimeout<RemoteOkRow[]>(SOURCES.remoteOk.url, timeoutMs);
+        return normalizeRemoteOk(json.filter((row) => typeof row === "object"), limitPerSource).length;
+      },
+    },
+  ];
+
+  const settled = await Promise.allSettled(
+    checks.map(async (check) => {
+      const offersFetched = await check.run();
+      const lastCheckedAt = new Date().toISOString();
+      const status: SourceHealthStatus = offersFetched < 3 ? "down" : "up";
+      return {
+        source: check.source,
+        status,
+        lastCheckedAt,
+        offersFetched,
+      } satisfies SourceHealth;
+    })
+  );
+
+  return settled.map((result, index) => {
+    if (result.status === "fulfilled") {
+      return result.value;
+    }
+
+    return {
+      source: checks[index].source,
+      status: "down" as const,
+      lastCheckedAt: new Date().toISOString(),
+      offersFetched: 0,
+    };
+  });
+}
 function dedupeByHash(rows: NormalizedOffer[]) {
   const unique = new Map<string, NormalizedOffer>();
   for (const row of rows) {
