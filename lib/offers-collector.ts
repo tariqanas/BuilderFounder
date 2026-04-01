@@ -359,14 +359,44 @@ async function fetchWelcomeToTheJungleJobs(limitPerSource: number) {
 
 
 
-type SourceHealthStatus = "up" | "down";
+type SourceFinalStatus = "up" | "partial" | "down";
+type SourceFetchStatus = "up" | "down";
+type SourceParseStatus = "good" | "weak" | "empty";
 
 export type SourceHealth = {
   source: string;
-  status: SourceHealthStatus;
+  status: SourceFinalStatus;
+  fetchStatus: SourceFetchStatus;
+  parseStatus: SourceParseStatus;
   lastCheckedAt: string;
   offersFetched: number;
+  reason: string;
 };
+
+function getParseStatus(offersFetched: number): SourceParseStatus {
+  if (offersFetched >= 3) return "good";
+  if (offersFetched >= 1) return "weak";
+  return "empty";
+}
+
+function getFinalStatus(fetchStatus: SourceFetchStatus, parseStatus: SourceParseStatus): SourceFinalStatus {
+  if (fetchStatus === "down") return "down";
+  return parseStatus === "good" ? "up" : "partial";
+}
+
+function getReasonFromError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.name === "TimeoutError") return "timeout";
+    if (error.message.startsWith("fetch_failed:")) return "fetch_failed";
+  }
+  return "blocked_or_empty_response";
+}
+
+function getReasonForParsedData(offersFetched: number): string {
+  if (offersFetched >= 3) return "ok";
+  if (offersFetched >= 1) return "no_structured_data";
+  return "blocked_or_empty_response";
+}
 
 async function fetchTextWithTimeout(url: string, timeoutMs: number) {
   const response = await fetch(url, {
@@ -458,12 +488,17 @@ export async function checkSourcesHealth(limitPerSource = 15): Promise<SourceHea
     checks.map(async (check) => {
       const offersFetched = await check.run();
       const lastCheckedAt = new Date().toISOString();
-      const status: SourceHealthStatus = offersFetched < 3 ? "down" : "up";
+      const fetchStatus: SourceFetchStatus = "up";
+      const parseStatus = getParseStatus(offersFetched);
+      const status = getFinalStatus(fetchStatus, parseStatus);
       return {
         source: check.source,
         status,
+        fetchStatus,
+        parseStatus,
         lastCheckedAt,
         offersFetched,
+        reason: getReasonForParsedData(offersFetched),
       } satisfies SourceHealth;
     })
   );
@@ -476,8 +511,11 @@ export async function checkSourcesHealth(limitPerSource = 15): Promise<SourceHea
     return {
       source: checks[index].source,
       status: "down" as const,
+      fetchStatus: "down" as const,
+      parseStatus: "empty" as const,
       lastCheckedAt: new Date().toISOString(),
       offersFetched: 0,
+      reason: getReasonFromError(result.reason),
     };
   });
 }
