@@ -56,7 +56,7 @@ const en = {
     flowTitle: "A precise flow from profile to mission in minutes.",
     step: "Step",
     dashboardTitle: "Inside the IT-Sniper command dashboard",
-    liveScoring: "Live scoring engine",
+    liveScoring: "Continuously updated scoring engine",
     mission: "Mission",
     whyFits: "Why this fits",
     generatedPitch: "Generated pitch",

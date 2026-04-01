@@ -55,7 +55,7 @@ export function MissionList({ missions }: { missions: MissionItem[] }) {
       <div className="empty-state">
         <p>No missions detected yet.</p>
         <p className="muted">Your radar is active and scanning freelance markets.</p>
-        <p className="muted">New mission signals will appear automatically.</p>
+        <p className="muted">Your radar scans the market continuously and updates your signals throughout the day.</p>
       </div>
     );
   }
