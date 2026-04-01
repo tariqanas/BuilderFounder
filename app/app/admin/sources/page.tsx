@@ -1,15 +1,9 @@
 import { checkSourcesHealth } from "@/lib/offers-collector";
 import { requireUser } from "@/lib/server-auth";
 import { redirect } from "next/navigation";
+import { isAdminEmail } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
-
-function getAdminEmails() {
-  return (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
@@ -17,10 +11,7 @@ function formatDate(value: string) {
 
 export default async function AdminSourcesPage() {
   const { user } = await requireUser();
-  const adminEmails = getAdminEmails();
-  const currentEmail = user.email?.toLowerCase() ?? "";
-
-  if (!adminEmails.length || !adminEmails.includes(currentEmail)) {
+  if (!isAdminEmail(user.email)) {
     redirect("/app");
   }
 

@@ -3,7 +3,15 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { getServerT } from "@/lib/i18n/server";
 
-export async function AppShell({ children, authenticated }: { children: React.ReactNode; authenticated: boolean }) {
+export async function AppShell({
+  children,
+  authenticated,
+  isAdmin,
+}: {
+  children: React.ReactNode;
+  authenticated: boolean;
+  isAdmin: boolean;
+}) {
   const { t } = await getServerT();
 
   return (
@@ -17,6 +25,7 @@ export async function AppShell({ children, authenticated }: { children: React.Re
           <Link href="/app/dashboard">{t("nav.console")}</Link>
           <Link href="/app/settings">{t("nav.settings")}</Link>
           <Link href="/billing">{t("nav.billing")}</Link>
+          {isAdmin ? <Link href="/app/admin/sources">Admin</Link> : null}
           <LanguageSwitcher />
           {authenticated ? <SignOutButton /> : null}
         </div>
