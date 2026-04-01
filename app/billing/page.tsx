@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getUserClientOrRedirect, isSubscriptionActive, requireUser } from "@/lib/server-auth";
 import { AppShell } from "@/components/app-shell";
 import { getOnboardingRedirectPath, getOnboardingState } from "@/lib/onboarding-state";
+import { isAdminEmail } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: { c
   }
 
   return (
-    <AppShell authenticated={Boolean(user)}>
+    <AppShell authenticated={Boolean(user)} isAdmin={isAdminEmail(user.email)}>
       <main style={{ maxWidth: 760 }}>
         <div className="card" style={{ display: "grid", gap: 14, padding: "1.4rem" }}>
         <h1 style={{ marginBottom: 0 }}>Billing</h1>
