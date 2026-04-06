@@ -389,11 +389,19 @@ label {
   padding: 0.32rem 0.55rem;
   font-size: 0.78rem;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
 }
 
 .language-switcher-btn[data-active="true"] {
   color: #ffffff;
   background: linear-gradient(135deg, #345fff, #6948ff);
+}
+
+.language-switcher-flag {
+  font-size: 0.95rem;
+  line-height: 1;
 }
 
 .manual-scan-wrap {

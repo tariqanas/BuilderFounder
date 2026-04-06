@@ -89,7 +89,7 @@ export default async function LandingPage() {
       className="landing-bg"
       style={{
         position: "relative",
-        overflow: "hidden",
+        overflowX: "hidden",
         background: "#070B14",
         color: "#f8fbff",
       }}
@@ -161,7 +161,7 @@ export default async function LandingPage() {
             </a>
             <details style={{ position: "relative" }}>
               <summary className="btn" style={{ listStyle: "none", padding: "0.52rem 0.85rem", borderRadius: 12, cursor: "pointer" }}>
-                Who is IT-Sniper
+                Who Built IT-Sniper
               </summary>
               <div
                 style={{
