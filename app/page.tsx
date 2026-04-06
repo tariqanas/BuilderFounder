@@ -59,6 +59,7 @@ const pricingPlans = [
     features: ["Unlimited profile setup", "Basic mission discovery", "Email support"],
     border: "1px solid rgba(148,163,184,0.45)",
     background: "linear-gradient(160deg, rgba(30,41,59,.9), rgba(15,23,42,.72))",
+    popular: false,
   },
   {
     name: "Pro",
@@ -67,6 +68,7 @@ const pricingPlans = [
     features: ["AI-ranked opportunities", "Weekly shortlist delivery", "Pitch templates included"],
     border: "1px solid rgba(96,165,250,0.52)",
     background: "linear-gradient(160deg, rgba(30,58,138,.85), rgba(15,23,42,.72))",
+    popular: false,
   },
   {
     name: "Realtime",
