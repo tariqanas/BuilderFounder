@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LanguageSwitcher } from "@/components/i18n/language-switcher";
+import { LandingNavbar } from "@/components/landing-navbar";
 import { createSupabaseServiceClient } from "@/lib/supabase";
 import { getAccessToken } from "@/lib/server-auth";
 
@@ -10,29 +10,6 @@ async function resolveStartCtaHref() {
   const service = createSupabaseServiceClient();
   const { data, error } = await service.auth.getUser(token);
   return !error && data.user ? "/billing" : "/login";
-}
-
-function ItSniperLogo({ compact = false }: { compact?: boolean }) {
-  const size = compact ? 28 : 40;
-
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" role="img" aria-label="IT-Sniper logo" style={{ flexShrink: 0 }}>
-      <defs>
-        <linearGradient id="radar" x1="10" y1="8" x2="56" y2="54" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#60A5FA" />
-          <stop offset="0.45" stopColor="#3B82F6" />
-          <stop offset="1" stopColor="#1D4ED8" />
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="27" stroke="url(#radar)" strokeWidth="2.5" opacity="0.95" />
-      <circle cx="32" cy="32" r="18" stroke="url(#radar)" strokeWidth="2.5" opacity="0.68" />
-      <circle cx="32" cy="32" r="9" stroke="url(#radar)" strokeWidth="2.5" opacity="0.48" />
-      <path d="M32 5v11M59 32H48M32 59V48M5 32h11" stroke="url(#radar)" strokeLinecap="round" strokeWidth="2.5" opacity="0.82" />
-      <path d="M32 32L50.5 14.5" stroke="url(#radar)" strokeLinecap="round" strokeWidth="3.2" />
-      <circle cx="50.5" cy="14.5" r="4" fill="#60A5FA" />
-      <circle cx="50.5" cy="14.5" r="8" stroke="#60A5FA" strokeOpacity="0.45" strokeWidth="1.6" />
-    </svg>
-  );
 }
 
 const problems = ["You waste hours searching for missions", "You miss high-quality opportunities", "You apply too late"];
@@ -107,90 +84,18 @@ export default async function LandingPage() {
         }}
       />
 
+      <LandingNavbar ctaHref={ctaHref} />
+
       <div
         style={{
           position: "relative",
           maxWidth: 1180,
           margin: "0 auto",
-          padding: "6.4rem 1rem 5rem",
+          padding: "2rem 1rem 5rem",
           display: "grid",
           gap: "5rem",
         }}
       >
-        <header
-          style={{
-            position: "fixed",
-            top: 12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "min(1180px, calc(100% - 2rem))",
-            zIndex: 40,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "0.8rem",
-            borderRadius: 16,
-            border: "1px solid rgba(59,130,246,0.25)",
-            background: "rgba(2,6,23,0.8)",
-            backdropFilter: "blur(12px)",
-            boxShadow: "0 16px 50px rgba(2,6,23,0.5)",
-            padding: "0.78rem 1rem",
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.7rem" }}>
-            <ItSniperLogo compact />
-            <div style={{ display: "grid", gap: "0.16rem" }}>
-              <span style={{ fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.06em" }}>IT-SNIPER</span>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  letterSpacing: "0.09em",
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                  background: "linear-gradient(90deg,#93c5fd,#f0abfc)",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                }}
-              >
-                By MiravoxTech
-              </span>
-            </div>
-          </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.62rem", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
-            <a href="#pricing" className="btn" style={{ padding: "0.52rem 0.85rem", borderRadius: 12 }}>
-              Pricing
-            </a>
-            <details style={{ position: "relative" }}>
-              <summary className="btn" style={{ listStyle: "none", padding: "0.52rem 0.85rem", borderRadius: 12, cursor: "pointer" }}>
-                Who Built IT-Sniper
-              </summary>
-              <div
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 0.45rem)",
-                  right: 0,
-                  minWidth: 220,
-                  borderRadius: 12,
-                  border: "1px solid rgba(96,165,250,.38)",
-                  background: "rgba(2,6,23,.95)",
-                  padding: "0.65rem",
-                  boxShadow: "0 16px 44px rgba(2,6,23,.65)",
-                }}
-              >
-                <a href="https://miravoxtech.com/en" target="_blank" rel="noreferrer" style={{ color: "#bfdbfe", textDecoration: "none", fontWeight: 600 }}>
-                  Discover MiravoxTech
-                </a>
-              </div>
-            </details>
-            <LanguageSwitcher />
-            <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.6rem 1rem", borderRadius: 12 }}>
-              Start free
-            </Link>
-          </div>
-        </header>
-
         <section style={{ display: "grid", gap: "1.4rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 310px),1fr))", alignItems: "center" }}>
           <div style={{ display: "grid", gap: "1.05rem" }}>
             <span
@@ -268,7 +173,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section style={{ display: "grid", gap: "1rem" }}>
+        <section id="features" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>The problem</p>
             <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Searching is killing your momentum</h2>
