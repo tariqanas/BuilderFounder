@@ -404,3 +404,124 @@ label {
 .manual-scan-count {
   margin: 0;
 }
+
+.landing-bg::before,
+.landing-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-bg::before {
+  background:
+    radial-gradient(circle, rgba(125, 211, 252, 0.28) 0 1px, transparent 1px),
+    radial-gradient(circle, rgba(59, 130, 246, 0.22) 0 1px, transparent 1px);
+  background-size: 46px 46px, 88px 88px;
+  background-position: 0 0, 16px 20px;
+  opacity: 0.45;
+  filter: drop-shadow(0 0 7px rgba(96, 165, 250, 0.2));
+  animation: landingStarsDrift 18s linear infinite;
+}
+
+.landing-bg::after {
+  background: conic-gradient(
+    from 190deg at 50% 50%,
+    rgba(14, 116, 144, 0) 0deg,
+    rgba(14, 116, 144, 0.08) 58deg,
+    rgba(96, 165, 250, 0.22) 88deg,
+    rgba(14, 116, 144, 0) 130deg,
+    rgba(59, 130, 246, 0.14) 230deg,
+    rgba(14, 116, 144, 0) 360deg
+  );
+  transform-origin: center;
+  opacity: 0.42;
+  animation: landingSweep 14s linear infinite;
+}
+
+.landing-bg-grid,
+.landing-bg-nodes,
+.landing-bg-pulse {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-bg-grid {
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.07) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0.95), transparent 76%);
+  transform: perspective(980px) rotateX(68deg) translateY(35%);
+  opacity: 0.45;
+  animation: landingGridFlow 16s linear infinite;
+}
+
+.landing-bg-nodes {
+  background:
+    radial-gradient(circle at 18% 30%, rgba(147, 197, 253, 0.45), transparent 10%),
+    radial-gradient(circle at 74% 22%, rgba(59, 130, 246, 0.35), transparent 14%),
+    radial-gradient(circle at 58% 65%, rgba(56, 189, 248, 0.26), transparent 12%),
+    radial-gradient(circle at 30% 72%, rgba(14, 165, 233, 0.2), transparent 15%);
+  filter: blur(1.2px);
+  animation: landingNodePulse 8s ease-in-out infinite alternate;
+}
+
+.landing-bg-pulse {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(148, 163, 184, 0.09), transparent 38%),
+    radial-gradient(circle at 85% 76%, rgba(96, 165, 250, 0.12), transparent 38%);
+  mix-blend-mode: screen;
+  animation: landingPulseTravel 10s ease-in-out infinite;
+}
+
+@keyframes landingGridFlow {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 0 36px, 36px 0;
+  }
+}
+
+@keyframes landingStarsDrift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(-40px, 28px, 0) scale(1.03);
+  }
+}
+
+@keyframes landingSweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes landingNodePulse {
+  from {
+    opacity: 0.28;
+  }
+  to {
+    opacity: 0.56;
+  }
+}
+
+@keyframes landingPulseTravel {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate3d(-10px, 12px, 0);
+    opacity: 0.46;
+  }
+}

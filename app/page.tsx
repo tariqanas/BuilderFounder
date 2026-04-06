@@ -56,6 +56,7 @@ export default async function LandingPage() {
 
   return (
     <main
+      className="landing-bg"
       style={{
         position: "relative",
         overflow: "hidden",
@@ -63,6 +64,9 @@ export default async function LandingPage() {
         color: "#f8fbff",
       }}
     >
+      <div aria-hidden="true" className="landing-bg-grid" />
+      <div aria-hidden="true" className="landing-bg-nodes" />
+      <div aria-hidden="true" className="landing-bg-pulse" />
       <div
         style={{
           pointerEvents: "none",
