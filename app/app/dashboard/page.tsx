@@ -11,6 +11,8 @@ import {
   toMissionReasons,
 } from "@/lib/mission-utils";
 import { NotificationsToggle } from "@/components/dashboard/notifications-toggle";
+import { ManualScanButton } from "@/components/dashboard/manual-scan-button";
+import { getManualRefreshStatus } from "@/lib/manual-radar-refresh";
 
 const timeAgo = (value: string | null) => {
   if (!value) return "No scan yet";
@@ -57,6 +59,8 @@ export default async function DashboardPage({
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .gte("created_at", weekStart);
+
+  const refreshStatus = await getManualRefreshStatus(user.id);
 
   const { data: latestMatch } = await supabase
     .from("mission_matches")
@@ -124,6 +128,7 @@ export default async function DashboardPage({
           <p className="muted">Last scan: {timeAgo(latestMatch?.created_at ?? null)}</p>
           <NotificationsToggle initialEnabled={settings?.notifications_enabled ?? true} />
           <p className="muted">Receive alerts when new matching missions are detected.</p>
+          <ManualScanButton initialRemaining={refreshStatus.remaining} />
         </article>
 
         <article className="card status-card">
