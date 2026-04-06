@@ -8,6 +8,7 @@ export function LanguageSwitcher() {
   const flags: Record<Locale, string> = {
     en: "🇬🇧",
     fr: "🇫🇷",
+    es: "🇪🇸",
   };
 
   return (
