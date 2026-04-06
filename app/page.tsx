@@ -63,7 +63,7 @@ export default async function LandingPage() {
 
   return (
     <main
-      className="landing-bg"
+      className="landing-bg min-h-screen"
       style={{
         position: "relative",
         overflowX: "hidden",
