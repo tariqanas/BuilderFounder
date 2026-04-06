@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getUserClientOrRedirect, requireUser } from "@/lib/server-auth";
 import { getOnboardingRedirectPath, getOnboardingState } from "@/lib/onboarding-state";
 import { redirect } from "next/navigation";
@@ -43,7 +42,7 @@ export default async function DashboardPage({
 
   const { data: settings } = await supabase
     .from("user_settings")
-    .select("primary_stack,secondary_stack,notifications_enabled")
+    .select("primary_stack,secondary_stack,notifications_enabled,radar_active")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -107,45 +106,65 @@ export default async function DashboardPage({
     })
     .filter((mission): mission is NonNullable<typeof mission> => mission !== null);
 
+  const firstNameRaw =
+    (typeof user.user_metadata?.first_name === "string" && user.user_metadata.first_name) ||
+    (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.split(" ")[0]) ||
+    user.email?.split("@")[0] ||
+    "there";
+  const firstName = firstNameRaw.charAt(0).toUpperCase() + firstNameRaw.slice(1);
+  const newToday = safeMissions.filter((mission) => Date.now() - new Date(mission.createdAt).getTime() <= 24 * 60 * 60 * 1000).length;
+  const radarActive = settings?.radar_active ?? true;
+
   return (
     <main className="dashboard-layout">
-      {searchParams?.notice === "onboarding-activated" && <p className="notice">Success. Radar is now active.</p>}
-      {searchParams?.notice === "profile-confirmed" && <p className="notice">Profile confirmed. Welcome to your dashboard.</p>}
-      {searchParams?.notice === "cv-empty-text" && <p className="notice">CV saved, but no extractable text was detected in the PDF.</p>}
+      {searchParams?.notice === "onboarding-activated" && <p className="notice">Radar is now active.</p>}
+      {searchParams?.notice === "profile-confirmed" && <p className="notice">Profile saved. You are ready to find missions.</p>}
+      {searchParams?.notice === "cv-empty-text" && <p className="notice">CV saved, but we could not read text from the file.</p>}
 
-      <section className="status-grid">
-        <article className="card status-card">
-          <span className="muted">Subscription</span>
-          <strong>{subscription?.status?.toUpperCase() ?? "INACTIVE"}</strong>
-          <Link href="/billing" className="card-link">
-            Manage billing
-          </Link>
+      <section className="card flex flex-col gap-6 rounded-2xl border-slate-800 bg-slate-950/80 p-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-200">
+            ● Radar active
+          </div>
+          <h1 className="mt-3 mb-2 text-3xl font-semibold text-white">Welcome back, {firstName}</h1>
+          <p className="m-0 max-w-2xl text-sm text-slate-300">
+            Your AI radar is scanning freelance missions and surfacing the best matches.
+          </p>
+        </div>
+        <div className="flex flex-col items-start gap-2">
+          <ManualScanButton initialRemaining={refreshStatus.remaining} label="Refresh radar" showRemaining={false} />
+          <p className="m-0 text-xs text-slate-400">Last refresh: {timeAgo(latestMatch?.created_at ?? null)}</p>
+        </div>
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-3">
+        <article className="card rounded-2xl border-slate-800 bg-slate-950/80 p-5">
+          <p className="m-0 text-sm text-slate-400">Missions found</p>
+          <p className="mt-2 mb-0 text-3xl font-semibold text-white">{safeMissions.length}</p>
         </article>
-
-        <article className="card status-card">
-          <span className="muted">Notifications</span>
-          <strong>{settings?.notifications_enabled ?? true ? "ON" : "OFF"}</strong>
-          <p className="muted">Last scan: {timeAgo(latestMatch?.created_at ?? null)}</p>
-          <NotificationsToggle initialEnabled={settings?.notifications_enabled ?? true} />
-          <p className="muted">Receive alerts when new matching missions are detected.</p>
-          <ManualScanButton initialRemaining={refreshStatus.remaining} />
+        <article className="card rounded-2xl border-slate-800 bg-slate-950/80 p-5">
+          <p className="m-0 text-sm text-slate-400">New today</p>
+          <p className="mt-2 mb-0 text-3xl font-semibold text-white">{newToday}</p>
         </article>
-
-        <article className="card status-card">
-          <span className="muted">Mission stats</span>
-          <strong>{missionsThisWeek ?? 0} missions this week</strong>
-          <span className="muted">Renews {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "-"}</span>
+        <article className="card rounded-2xl border-slate-800 bg-slate-950/80 p-5">
+          <p className="m-0 text-sm text-slate-400">Radar status</p>
+          <p className="mt-2 mb-0 text-3xl font-semibold text-white">{radarActive ? "Active" : "Paused"}</p>
+          <div className="mt-3">
+            <NotificationsToggle initialEnabled={settings?.notifications_enabled ?? true} />
+          </div>
         </article>
       </section>
 
-      <section className="card mission-section">
-        <div className="mission-section-header">
-          <h2>Mission Signals</h2>
-          <Link href="/app/settings" className="card-link">
-            Settings
-          </Link>
+      <section className="card mission-section rounded-2xl border-slate-800 bg-slate-950/80 p-5">
+        <div className="mission-section-header flex-col items-start">
+          <h2 className="m-0 text-2xl font-semibold text-white">Recommended missions</h2>
+          <p className="m-0 text-sm text-slate-400">Best opportunities detected by your AI radar</p>
         </div>
         <MissionList missions={safeMissions} />
+        <p className="m-0 text-xs text-slate-500">
+          Plan: {subscription?.status?.toUpperCase() ?? "INACTIVE"} • Weekly discoveries: {missionsThisWeek ?? 0} • Renewal{" "}
+          {subscription?.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString() : "-"}
+        </p>
       </section>
     </main>
   );
