@@ -30,11 +30,11 @@ a {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(15, 18, 31, 0.9) 0%, rgba(10, 12, 21, 0.92) 100%);
-  border: 1px solid #242a40;
-  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(22, 24, 36, 0.95) 0%, rgba(12, 14, 23, 0.96) 100%);
+  border: 1px solid #25283c;
+  border-radius: 16px;
   padding: 1rem;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
 .top-nav {
@@ -131,13 +131,6 @@ a {
 
 .btn-primary:hover {
   filter: brightness(1.08);
-}
-
-.btn:disabled,
-.btn[aria-disabled="true"] {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
 }
 
 input,
