@@ -143,31 +143,87 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          <div style={{ borderRadius: 22, border: "1px solid #1e293b", background: "rgba(2,6,23,.86)", padding: "1rem", boxShadow: "0 30px 80px rgba(2,6,23,.6)" }}>
-            <div style={{ borderRadius: 16, border: "1px solid #1e293b", background: "#0f172a", padding: "0.95rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem", alignItems: "center", marginBottom: "0.8rem" }}>
-                <p style={{ margin: 0, fontWeight: 650, fontSize: "0.92rem", color: "#e2e8f0" }}>Live mission radar</p>
-                <span className="badge badge-success" style={{ borderRadius: 999 }}>3 new now</span>
+          <div style={{ display: "grid", gap: "0.85rem" }}>
+            <aside
+              style={{
+                borderRadius: 16,
+                border: "1px solid rgba(45,212,191,.44)",
+                background:
+                  "linear-gradient(130deg, rgba(20,184,166,.26), rgba(37,99,235,.32) 54%, rgba(2,6,23,.9) 95%)",
+                padding: "0.85rem 0.92rem",
+                boxShadow: "0 14px 36px rgba(20,184,166,.18), inset 0 0 0 1px rgba(147,197,253,.12)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "0.56rem", marginBottom: "0.44rem" }}>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "1.9rem",
+                    height: "1.9rem",
+                    borderRadius: "50%",
+                    background: "rgba(34,197,94,.24)",
+                    color: "#86efac",
+                    boxShadow: "0 0 22px rgba(34,197,94,.4)",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                    <path d="M20.5 3.5A11 11 0 0 0 3.67 17.1L2 22l5.02-1.6A11 11 0 1 0 20.5 3.5Zm-8.49 18a9.2 9.2 0 0 1-4.7-1.28l-.33-.2-2.98.95.96-2.9-.22-.34a9.2 9.2 0 1 1 7.27 3.77Zm5.05-6.89c-.28-.14-1.68-.83-1.94-.93-.26-.1-.45-.14-.65.14-.2.28-.74.93-.91 1.12-.17.2-.33.22-.61.08-.28-.14-1.17-.43-2.24-1.37-.83-.73-1.4-1.63-1.56-1.9-.17-.28-.02-.43.12-.57.12-.12.28-.33.41-.49.14-.16.18-.28.28-.47.1-.2.05-.37-.02-.51-.08-.14-.65-1.57-.89-2.15-.23-.56-.47-.49-.65-.5h-.56c-.2 0-.51.07-.78.37-.26.3-1 1-1 2.45 0 1.45 1.05 2.84 1.2 3.04.14.2 2.06 3.14 5 4.4.7.3 1.25.47 1.68.6.7.22 1.35.19 1.86.12.57-.08 1.68-.68 1.92-1.34.24-.67.24-1.23.17-1.34-.06-.12-.24-.19-.51-.33Z" />
+                  </svg>
+                </span>
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "1.9rem",
+                    height: "1.9rem",
+                    borderRadius: "50%",
+                    background: "rgba(96,165,250,.26)",
+                    color: "#bfdbfe",
+                    boxShadow: "0 0 22px rgba(96,165,250,.36)",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+                    <path d="M2 6.6A2.6 2.6 0 0 1 4.6 4h14.8A2.6 2.6 0 0 1 22 6.6v10.8A2.6 2.6 0 0 1 19.4 20H4.6A2.6 2.6 0 0 1 2 17.4V6.6Zm2.6-.8a.8.8 0 0 0-.54.21L12 12.8 19.94 6a.8.8 0 0 0-.54-.21H4.6Zm15.6 2.08-6.98 5.98a1.8 1.8 0 0 1-2.36 0L3.8 7.88v9.52c0 .44.36.8.8.8h14.8a.8.8 0 0 0 .8-.8V7.88Z" />
+                  </svg>
+                </span>
+                <span className="badge" style={{ borderColor: "rgba(45,212,191,.6)", background: "rgba(45,212,191,.18)", color: "#99f6e4" }}>
+                  Instant alerts
+                </span>
               </div>
-              <div style={{ display: "grid", gap: "0.65rem" }}>
-                {[
-                  { role: "Senior DevOps Lead", score: "95%", rate: "€780/day", badge: "High urgency" },
-                  { role: "Cloud Architect - FinTech", score: "91%", rate: "€850/day", badge: "Fresh mission" },
-                  { role: "Kubernetes Platform Engineer", score: "88%", rate: "€730/day", badge: "Great fit" },
-                ].map((mission) => (
-                  <article key={mission.role} style={{ border: "1px solid #1e293b", borderRadius: 12, background: "rgba(2,6,23,0.8)", padding: "0.78rem" }}>
-                    <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: "0.6rem" }}>
-                      <h3 style={{ margin: 0, fontSize: "0.95rem" }}>{mission.role}</h3>
-                      <span className="badge badge-info">Score {mission.score}</span>
-                    </div>
-                    <p style={{ margin: "0.45rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                      {mission.rate} · {mission.badge}
-                    </p>
-                    <p style={{ margin: "0.48rem 0 0", color: "#cbd5e1", fontSize: "0.83rem" }}>
-                      AI pitch ready: “I delivered this stack in production and can onboard fast.”
-                    </p>
-                  </article>
-                ))}
+              <p style={{ margin: 0, color: "#ecfeff", fontSize: "0.95rem", fontWeight: 620, lineHeight: 1.45 }}>
+                Be the first to receive alerts on new business opportunities in your chosen area.
+              </p>
+            </aside>
+
+            <div style={{ borderRadius: 22, border: "1px solid #1e293b", background: "rgba(2,6,23,.86)", padding: "1rem", boxShadow: "0 30px 80px rgba(2,6,23,.6)" }}>
+              <div style={{ borderRadius: 16, border: "1px solid #1e293b", background: "#0f172a", padding: "0.95rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem", alignItems: "center", marginBottom: "0.8rem" }}>
+                  <p style={{ margin: 0, fontWeight: 650, fontSize: "0.92rem", color: "#e2e8f0" }}>Live mission radar</p>
+                  <span className="badge badge-success" style={{ borderRadius: 999 }}>3 new now</span>
+                </div>
+                <div style={{ display: "grid", gap: "0.65rem" }}>
+                  {[
+                    { role: "Senior DevOps Lead", score: "95%", rate: "€780/day", badge: "High urgency" },
+                    { role: "Cloud Architect - FinTech", score: "91%", rate: "€850/day", badge: "Fresh mission" },
+                    { role: "Kubernetes Platform Engineer", score: "88%", rate: "€730/day", badge: "Great fit" },
+                  ].map((mission) => (
+                    <article key={mission.role} style={{ border: "1px solid #1e293b", borderRadius: 12, background: "rgba(2,6,23,0.8)", padding: "0.78rem" }}>
+                      <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: "0.6rem" }}>
+                        <h3 style={{ margin: 0, fontSize: "0.95rem" }}>{mission.role}</h3>
+                        <span className="badge badge-info">Score {mission.score}</span>
+                      </div>
+                      <p style={{ margin: "0.45rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                        {mission.rate} · {mission.badge}
+                      </p>
+                      <p style={{ margin: "0.48rem 0 0", color: "#cbd5e1", fontSize: "0.83rem" }}>
+                        AI pitch ready: “I delivered this stack in production and can onboard fast.”
+                      </p>
+                    </article>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
