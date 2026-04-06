@@ -112,15 +112,18 @@ export default async function LandingPage() {
           position: "relative",
           maxWidth: 1180,
           margin: "0 auto",
-          padding: "1.2rem 1rem 5rem",
+          padding: "6.4rem 1rem 5rem",
           display: "grid",
           gap: "5rem",
         }}
       >
         <header
           style={{
-            position: "sticky",
-            top: 14,
+            position: "fixed",
+            top: 12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(1180px, calc(100% - 2rem))",
             zIndex: 40,
             display: "flex",
             alignItems: "center",
@@ -155,7 +158,7 @@ export default async function LandingPage() {
               </span>
             </div>
           </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.62rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.62rem", flexWrap: "wrap", justifyContent: "flex-end", maxWidth: "100%" }}>
             <a href="#pricing" className="btn" style={{ padding: "0.52rem 0.85rem", borderRadius: 12 }}>
               Pricing
             </a>
@@ -188,7 +191,7 @@ export default async function LandingPage() {
           </div>
         </header>
 
-        <section style={{ display: "grid", gap: "1.4rem", gridTemplateColumns: "repeat(auto-fit,minmax(310px,1fr))", alignItems: "center" }}>
+        <section style={{ display: "grid", gap: "1.4rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 310px),1fr))", alignItems: "center" }}>
           <div style={{ display: "grid", gap: "1.05rem" }}>
             <span
               style={{
@@ -221,7 +224,7 @@ export default async function LandingPage() {
                 See how it works
               </a>
             </div>
-            <div style={{ marginTop: "0.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.62rem", maxWidth: 620 }}>
+            <div style={{ marginTop: "0.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 150px),1fr))", gap: "0.62rem", maxWidth: 620 }}>
               {[
                 ["24/7", "mission scanning"],
                 ["Top-fit", "AI ranking first"],
@@ -270,7 +273,7 @@ export default async function LandingPage() {
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>The problem</p>
             <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Searching is killing your momentum</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))" }}>
+          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 230px),1fr))" }}>
             {problems.map((problem) => (
               <article key={problem} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
                 <p style={{ margin: 0, color: "#f1f5f9", fontWeight: 530, fontSize: "1.04rem" }}>{problem}</p>
@@ -284,7 +287,7 @@ export default async function LandingPage() {
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>How it works</p>
             <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>From search chaos to daily inbound missions</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))" }}>
+          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 210px),1fr))" }}>
             {steps.map((step, index) => (
               <article key={step} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
                 <span className="badge" style={{ borderColor: "rgba(96,165,250,0.35)", background: "rgba(59,130,246,0.1)", color: "#bfdbfe" }}>
@@ -301,7 +304,7 @@ export default async function LandingPage() {
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Value</p>
             <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Everything you need to win faster</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 220px),1fr))" }}>
             {features.map(([title, description]) => (
               <article key={title} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
                 <h3 style={{ margin: 0, fontSize: "1.18rem" }}>{title}</h3>
@@ -316,7 +319,7 @@ export default async function LandingPage() {
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Pricing</p>
             <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Choose the plan that matches your pace</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 220px),1fr))" }}>
             {pricingPlans.map((plan) => (
               <article
                 key={plan.name}
@@ -351,7 +354,7 @@ export default async function LandingPage() {
         </section>
 
         <section style={{ borderRadius: 18, border: "1px solid #1e293b", background: "rgba(15,23,42,.72)", padding: "1.2rem" }}>
-          <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))" }}>
+          <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 260px),1fr))" }}>
             <div style={{ display: "grid", gap: "0.5rem" }}>
               <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Social proof</p>
               <h2 style={{ margin: 0, fontSize: "clamp(1.45rem,3vw,2.3rem)", letterSpacing: "-0.02em" }}>Used by freelancers across Europe</h2>
