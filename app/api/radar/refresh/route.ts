@@ -21,14 +21,29 @@ export async function POST() {
     return NextResponse.json({ error: "Daily limit reached", remaining: 0, limit: status.limit }, { status: 429 });
   }
 
-  queueMicrotask(() => {
-    void runMatchingForUser(user.id).catch((error) => {
-      console.error("[radar-refresh] scoped_user_matching_failed", {
-        userId: user.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
+  try {
+    const result = await runMatchingForUser(user.id);
+    return NextResponse.json({
+      success: true,
+      remaining: status.remaining,
+      limit: status.limit,
+      createdMissions: result.createdMissions ?? 0,
+      usersProcessed: result.usersProcessed ?? 0,
     });
-  });
+  } catch (error) {
+    console.error("[radar-refresh] scoped_user_matching_failed", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
 
-  return NextResponse.json({ success: true, remaining: status.remaining, limit: status.limit });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Matching failed",
+        remaining: status.remaining,
+        limit: status.limit,
+      },
+      { status: 500 }
+    );
+  }
 }

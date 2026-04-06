@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type ManualScanButtonProps = {
   initialRemaining: number;
 };
 
 export function ManualScanButton({ initialRemaining }: ManualScanButtonProps) {
+  const router = useRouter();
   const [remaining, setRemaining] = useState(initialRemaining);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -21,7 +23,9 @@ export function ManualScanButton({ initialRemaining }: ManualScanButtonProps) {
       const response = await fetch("/api/radar/refresh", {
         method: "POST",
       });
-      const payload = (await response.json().catch(() => null)) as { remaining?: unknown; error?: unknown } | null;
+      const payload = (await response.json().catch(() => null)) as
+        | { remaining?: unknown; error?: unknown; createdMissions?: unknown }
+        | null;
 
       if (!response.ok) {
         setToast("Limit reached today");
@@ -34,7 +38,14 @@ export function ManualScanButton({ initialRemaining }: ManualScanButtonProps) {
       if (typeof payload?.remaining === "number") {
         setRemaining(payload.remaining);
       }
-      setToast("New missions incoming");
+
+      const createdMissions = typeof payload?.createdMissions === "number" ? payload.createdMissions : 0;
+      if (createdMissions > 0) {
+        setToast(`${createdMissions} new mission${createdMissions > 1 ? "s" : ""} found`);
+      } else {
+        setToast("Scan complete: no new missions found");
+      }
+      router.refresh();
     } catch {
       setToast("Limit reached today");
     } finally {
