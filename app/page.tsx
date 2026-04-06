@@ -51,6 +51,34 @@ const features = [
   ["No manual searching", "Stop scrolling. Focus on closing clients."],
 ] as const;
 
+const pricingPlans = [
+  {
+    name: "Free",
+    price: "0€",
+    subtitle: "Forever",
+    features: ["Unlimited profile setup", "Basic mission discovery", "Email support"],
+    border: "1px solid rgba(148,163,184,0.45)",
+    background: "linear-gradient(160deg, rgba(30,41,59,.9), rgba(15,23,42,.72))",
+  },
+  {
+    name: "Pro",
+    price: "39€",
+    subtitle: "3 missions per week",
+    features: ["AI-ranked opportunities", "Weekly shortlist delivery", "Pitch templates included"],
+    border: "1px solid rgba(96,165,250,0.52)",
+    background: "linear-gradient(160deg, rgba(30,58,138,.85), rgba(15,23,42,.72))",
+  },
+  {
+    name: "Realtime",
+    price: "49€",
+    subtitle: "Realtime",
+    features: ["Instant mission alerts", "Priority scoring and matching", "Fast-track support"],
+    border: "1px solid rgba(250,204,21,0.75)",
+    background: "linear-gradient(155deg, rgba(161,98,7,.35), rgba(30,64,175,.82))",
+    popular: true,
+  },
+] as const;
+
 export default async function LandingPage() {
   const ctaHref = await resolveStartCtaHref();
 
@@ -107,9 +135,50 @@ export default async function LandingPage() {
         >
           <div style={{ display: "inline-flex", alignItems: "center", gap: "0.7rem" }}>
             <ItSniperLogo compact />
-            <span style={{ fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.06em" }}>IT-SNIPER</span>
+            <div style={{ display: "grid", gap: "0.16rem" }}>
+              <span style={{ fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.06em" }}>IT-SNIPER</span>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  letterSpacing: "0.09em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                  background: "linear-gradient(90deg,#93c5fd,#f0abfc)",
+                  WebkitBackgroundClip: "text",
+                  backgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
+                By MiravoxTech
+              </span>
+            </div>
           </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.62rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <a href="#pricing" className="btn" style={{ padding: "0.52rem 0.85rem", borderRadius: 12 }}>
+              Pricing
+            </a>
+            <details style={{ position: "relative" }}>
+              <summary className="btn" style={{ listStyle: "none", padding: "0.52rem 0.85rem", borderRadius: 12, cursor: "pointer" }}>
+                Who is IT-Sniper
+              </summary>
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 0.45rem)",
+                  right: 0,
+                  minWidth: 220,
+                  borderRadius: 12,
+                  border: "1px solid rgba(96,165,250,.38)",
+                  background: "rgba(2,6,23,.95)",
+                  padding: "0.65rem",
+                  boxShadow: "0 16px 44px rgba(2,6,23,.65)",
+                }}
+              >
+                <a href="https://miravoxtech.com/en" target="_blank" rel="noreferrer" style={{ color: "#bfdbfe", textDecoration: "none", fontWeight: 600 }}>
+                  Discover MiravoxTech
+                </a>
+              </div>
+            </details>
             <LanguageSwitcher />
             <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.6rem 1rem", borderRadius: 12 }}>
               Start free
@@ -235,6 +304,45 @@ export default async function LandingPage() {
               <article key={title} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
                 <h3 style={{ margin: 0, fontSize: "1.18rem" }}>{title}</h3>
                 <p style={{ margin: "0.4rem 0 0", color: "#cbd5e1", lineHeight: 1.55 }}>{description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="pricing" style={{ display: "grid", gap: "1rem" }}>
+          <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
+            <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Pricing</p>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Choose the plan that matches your pace</h2>
+          </div>
+          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+            {pricingPlans.map((plan) => (
+              <article
+                key={plan.name}
+                style={{
+                  borderRadius: 16,
+                  border: plan.border,
+                  background: plan.background,
+                  padding: "1rem",
+                  boxShadow: plan.popular ? "0 18px 52px rgba(250,204,21,.24)" : "0 14px 34px rgba(2,6,23,.45)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: "0.7rem" }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.2rem" }}>{plan.name}</h3>
+                    <p style={{ margin: "0.4rem 0 0", color: "#cbd5e1", fontSize: "0.92rem" }}>{plan.subtitle}</p>
+                  </div>
+                  {plan.popular ? (
+                    <span className="badge" style={{ borderColor: "rgba(250,204,21,.7)", background: "rgba(250,204,21,.2)", color: "#fde68a" }}>
+                      Most popular
+                    </span>
+                  ) : null}
+                </div>
+                <p style={{ margin: "0.8rem 0 0", fontSize: "2rem", fontWeight: 700 }}>{plan.price}</p>
+                <ul style={{ margin: "0.75rem 0 0", paddingLeft: "1.1rem", color: "#e2e8f0", display: "grid", gap: "0.42rem" }}>
+                  {plan.features.map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
               </article>
             ))}
           </div>
