@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/server-auth";
 import { consumeManualRefresh, getManualRefreshStatus } from "@/lib/manual-radar-refresh";
 import { runMatchingForUser } from "@/lib/matching-engine";
+import { collectOffers } from "@/lib/offers-collector";
 
 export async function GET() {
   const { user } = await requireUser();
@@ -15,12 +16,21 @@ export async function GET() {
 
 export async function POST() {
   const { user } = await requireUser();
+  console.info("[refresh] user", user.id);
 
   const status = await consumeManualRefresh(user.id);
   if (!status.allowed) {
     return NextResponse.json({ error: "Daily limit reached", remaining: 0, limit: status.limit }, { status: 429 });
   }
 
+  console.info("[refresh] running lightweight fetch");
+  try {
+    await collectOffers(10);
+  } catch (error) {
+    console.error("[refresh] collectOffers failed", error);
+  }
+
+  console.info("[refresh] running matching");
   try {
     const result = await runMatchingForUser(user.id);
     return NextResponse.json({
