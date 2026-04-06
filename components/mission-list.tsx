@@ -17,112 +17,98 @@ type MissionItem = {
   dayRate: number | null;
 };
 
-const reasonToTag = (reason: string) => {
+const scoreTier = (score: number) => {
+  if (score >= 90) return { label: "Perfect match", tone: "badge-success" };
+  if (score >= 80) return { label: "Strong match", tone: "badge-info" };
+  return { label: "Good match", tone: "badge-warning" };
+};
+
+const reasonToChip = (reason: string) => {
   const cleanReason = reason.trim();
   const lower = cleanReason.toLowerCase();
 
-  if (lower.includes("react")) return "React";
-  if (lower.includes("next")) return "Next.js";
-  if (lower.includes("node")) return "Node";
-  if (lower.includes("aws")) return "AWS";
-  if (lower.includes("frontend")) return "Frontend";
-  if (lower.includes("backend")) return "Backend";
-  if (lower.includes("fullstack")) return "Fullstack";
+  if (lower.includes("stack") || lower.includes("tech") || lower.includes("skill")) return "Stack match";
   if (lower.includes("remote")) return "Remote";
+  if (lower.includes("country") || lower.includes("location") || lower.includes("france")) return "Country";
+  if (lower.includes("rate") || lower.includes("budget") || lower.includes("day")) return "Rate";
 
-  return cleanReason.length > 14 ? `${cleanReason.slice(0, 14)}…` : cleanReason;
-};
-
-const scoreTone = (score: number) => {
-  if (score >= 90) return "border-emerald-500/40 bg-emerald-500/10 text-emerald-200";
-  if (score >= 80) return "border-blue-500/40 bg-blue-500/10 text-blue-200";
-  return "border-amber-500/40 bg-amber-500/10 text-amber-200";
+  return cleanReason.length > 22 ? `${cleanReason.slice(0, 22)}…` : cleanReason;
 };
 
 export function MissionList({ missions }: { missions: MissionItem[] }) {
-  const [copiedMissionId, setCopiedMissionId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const copyPitch = async (missionId: string, pitch: string) => {
+  const copyPitch = async (pitch: string) => {
     try {
       await navigator.clipboard.writeText(pitch ?? "");
-      setCopiedMissionId(missionId);
-      setTimeout(() => setCopiedMissionId((current) => (current === missionId ? null : current)), 1800);
+      setToast("Pitch copied");
     } catch {
-      setCopiedMissionId(null);
+      setToast("Clipboard unavailable");
     }
+    setTimeout(() => setToast(null), 1800);
   };
 
   const sortedMissions = useMemo(() => [...missions].sort((a, b) => b.score - a.score), [missions]);
 
   if (!sortedMissions.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-6 py-14 text-center">
-        <h3 className="m-0 text-xl font-semibold text-white">No missions yet</h3>
-        <p className="mx-auto mt-3 mb-0 max-w-lg text-sm text-slate-300">
-          Your radar is active. New opportunities will appear after the next scan.
-        </p>
+      <div className="empty-state">
+        <p>No missions detected yet.</p>
+        <p className="muted">Your radar is active and scanning freelance markets.</p>
+        <p className="muted">Your radar scans the market continuously and updates your signals throughout the day.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="mission-grid">
+      {toast && <p className="badge badge-info toast-badge">{toast}</p>}
       {sortedMissions.map((mission) => {
+        const missionTier = scoreTier(mission.score);
         const isNew = Date.now() - new Date(mission.createdAt).getTime() <= 24 * 60 * 60 * 1000;
-        const locationText = `${mission.company} • ${mission.remote || "Remote"} • ${mission.country || "Global"}`;
-        const tags = (mission.reasons.length ? mission.reasons : ["React", "Node", "AWS"]).map(reasonToTag).slice(0, 4);
-        const shortDescription = mission.reasons.length
-          ? `Strong fit for your profile: ${mission.reasons.slice(0, 2).join(" • ")}`
-          : "Solid fit for your profile. Open now and send your pitch quickly.";
+        const locationText = `${mission.country || "Global"} • ${mission.remote || "Remote"}`;
+        const reasonChips = (mission.reasons.length ? mission.reasons : ["Stack match", "Remote", "Country", "Rate"])
+          .map(reasonToChip)
+          .slice(0, 4);
 
         return (
-          <article
-            key={mission.id}
-            className="group cursor-pointer rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-sm transition hover:border-slate-600"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="m-0 truncate text-xl font-semibold text-white md:text-2xl">{mission.title}</h3>
-                <p className="mt-2 mb-0 truncate text-sm text-slate-400">{locationText}</p>
+          <article key={mission.id} className="mission-card">
+            <div className="mission-header">
+              <div>
+                <h3>{mission.title}</h3>
+                <p className="muted mission-company">{mission.company}</p>
               </div>
-              <div className={`rounded-full border px-3 py-1 text-sm font-semibold ${scoreTone(mission.score)}`}>
-                🔥 {mission.score}/100 match
+              <div className="mission-badges">
+                <span className={`badge ${missionTier.tone}`}>{`${missionTier.label} • Score ${mission.score}`}</span>
+                {isNew ? <span className="badge badge-new">NEW</span> : null}
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {tags.map((tag, index) => (
-                <span key={`${mission.id}-${tag}-${index}`} className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200">
-                  {tag}
+            <div className="mission-meta">
+              <span className="muted">{locationText}</span>
+              <span>{mission.dayRate ? `${mission.dayRate}€/day` : "Rate not specified"}</span>
+            </div>
+
+            <div className="chip-row">
+              {reasonChips.map((chip, index) => (
+                <span key={`${mission.id}-${chip}-${index}`} className="chip">
+                  {chip}
                 </span>
               ))}
-              {isNew ? <span className="rounded-full border border-violet-500/50 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-200">New today</span> : null}
-              {mission.dayRate ? (
-                <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200">{mission.dayRate}€/day</span>
-              ) : null}
             </div>
 
-            <p className="mt-4 mb-0 line-clamp-2 text-sm leading-6 text-slate-300">{shortDescription}</p>
-
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="mission-actions">
               {mission.hasValidUrl ? (
-                <a
-                  className="btn btn-primary"
-                  href={mission.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  View mission
+                <a className="btn btn-primary" href={mission.url} target="_blank" rel="noreferrer noopener">
+                  Open mission
                 </a>
               ) : (
-                <button type="button" className="btn btn-primary" disabled>
-                  View mission
-                </button>
+                <span className="btn btn-primary" aria-disabled="true" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                  Open mission
+                </span>
               )}
-
-              <button type="button" className="btn" onClick={() => copyPitch(mission.id, mission.pitch ?? "")}> 
-                {copiedMissionId === mission.id ? "Copied ✓" : "Copy pitch"}
+              <button className="btn" onClick={() => copyPitch(mission.pitch ?? "")}>
+                Copy pitch
               </button>
             </div>
           </article>

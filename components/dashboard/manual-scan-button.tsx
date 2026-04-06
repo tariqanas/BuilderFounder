@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 
 type ManualScanButtonProps = {
   initialRemaining: number;
-  label?: string;
-  showRemaining?: boolean;
-  className?: string;
 };
 
-export function ManualScanButton({ initialRemaining, label = "Refresh radar", showRemaining = true, className = "" }: ManualScanButtonProps) {
+export function ManualScanButton({ initialRemaining }: ManualScanButtonProps) {
   const router = useRouter();
   const [remaining, setRemaining] = useState(initialRemaining);
   const [loading, setLoading] = useState(false);
@@ -58,17 +55,11 @@ export function ManualScanButton({ initialRemaining, label = "Refresh radar", sh
   };
 
   return (
-    <div className={`manual-scan-wrap ${className}`.trim()}>
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={triggerScan}
-        disabled={loading || remaining <= 0}
-        aria-busy={loading}
-      >
-        {loading ? "Refreshing..." : label}
+    <div className="manual-scan-wrap">
+      <button type="button" className="btn" onClick={triggerScan} disabled={loading || remaining <= 0}>
+        {loading ? "Scanning..." : "🔄 Manual Scan now"}
       </button>
-      {showRemaining ? <p className="muted manual-scan-count">{remaining} refreshes left today</p> : null}
+      <p className="muted manual-scan-count">{remaining} manual scans left today</p>
       {toast ? <p className="badge badge-info toast-badge">{toast}</p> : null}
     </div>
   );
