@@ -57,11 +57,8 @@ a {
 }
 
 .brand-mark {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: linear-gradient(120deg, #4f7cff, #875cff);
-  box-shadow: 0 0 18px rgba(79, 124, 255, 0.75);
+  width: 18px;
+  height: 18px;
 }
 
 .top-nav-links {
@@ -394,7 +391,7 @@ label {
   min-width: 92px;
   border: 1px solid #323a59;
   border-radius: 999px;
-  padding: 0.35rem 1.85rem 0.35rem 2rem;
+  padding: 0.35rem 1.85rem 0.35rem 2.2rem;
   background: rgba(10, 13, 23, 0.9);
   color: #c1caea;
   font-size: 0.78rem;
@@ -414,8 +411,15 @@ label {
 }
 
 .language-switcher-select-icon {
-  left: 0.72rem;
-  font-size: 0.9rem;
+  left: 0.66rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.language-switcher-logo {
+  width: 14px;
+  height: 14px;
 }
 
 .language-switcher-select-chevron {
@@ -439,7 +443,7 @@ label {
   color: #c1caea;
   border-radius: 999px;
   padding: 0.32rem 0.55rem;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -449,11 +453,6 @@ label {
 .language-switcher-btn[data-active="true"] {
   color: #ffffff;
   background: linear-gradient(135deg, #345fff, #6948ff);
-}
-
-.language-switcher-flag {
-  font-size: 0.95rem;
-  line-height: 1;
 }
 
 .language-switcher-mobile {
@@ -759,12 +758,25 @@ label {
 .landing-navbar-lang {
   display: inline-flex;
   align-items: center;
+  position: relative;
+}
+
+.landing-navbar-lang-icon {
+  position: absolute;
+  left: 0.6rem;
+  pointer-events: none;
+  display: inline-flex;
+}
+
+.landing-navbar-lang-logo {
+  width: 14px;
+  height: 14px;
 }
 
 .landing-navbar-lang-select {
   border: 1px solid #323a59;
   border-radius: 999px;
-  padding: 0.35rem 0.7rem;
+  padding: 0.35rem 0.7rem 0.35rem 2rem;
   background: rgba(10, 13, 23, 0.9);
   color: #c1caea;
   font-size: 0.78rem;

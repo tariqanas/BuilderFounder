@@ -5,9 +5,9 @@ const es = {
   },
   language: {
     switcherLabel: "Idioma",
-    en: "🇬🇧 English",
-    fr: "🇫🇷 Français",
-    es: "🇪🇸 Español",
+    en: "English",
+    fr: "Français",
+    es: "Español",
   },
   nav: {
     console: "Consola",
@@ -68,6 +68,23 @@ const es = {
     finalDescription: "Deja que el radar trabaje por ti mientras te enfocas en entregar gran ingeniería.",
     startFree: "Empezar gratis",
     footerTagline: "IA de precisión para ingenieros freelance",
+  },
+
+  landingPage: {
+    nav: {
+      features: "Funciones",
+      howItWorks: "Cómo funciona",
+      pricing: "Precios",
+      whoMade: "Quién creó IT-SNIPER",
+      primaryNavAria: "Navegación principal",
+      mobileNavAria: "Navegación móvil",
+      openMenu: "Abrir menú de navegación",
+      closeMenu: "Cerrar menú de navegación",
+      closeOverlay: "Cerrar menú superpuesto",
+    },
+    actions: {
+      startFree: "Empezar gratis",
+    },
   },
 };
 

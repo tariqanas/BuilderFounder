@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LanguageSwitcher } from "@/components/i18n/language-switcher";
 import { getServerT } from "@/lib/i18n/server";
+import { ItSniperLogoMark } from "@/components/it-sniper-logo-mark";
 
 export async function AppShell({
   children,
@@ -18,7 +19,7 @@ export async function AppShell({
     <div className="container app-shell">
       <nav className="card top-nav">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
+          <ItSniperLogoMark className="brand-mark" />
           <strong>IT-Sniper</strong>
         </div>
         <div className="top-nav-links">

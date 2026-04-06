@@ -2,21 +2,17 @@
 
 import { type Locale, SUPPORTED_LOCALES } from "@/lib/i18n/config";
 import { useI18n } from "@/components/i18n/i18n-provider";
+import { ItSniperLogoMark } from "@/components/it-sniper-logo-mark";
 
 export function LanguageSwitcher() {
   const { locale, setLocale, t } = useI18n();
-  const flags: Record<Locale, string> = {
-    en: "🇬🇧",
-    fr: "🇫🇷",
-    es: "🇪🇸",
-  };
 
   return (
     <div className="language-switcher-wrap">
       <label className="language-switcher-select-label">
         <span className="sr-only">{t("language.switcherLabel")}</span>
         <span aria-hidden="true" className="language-switcher-select-icon">
-          🌐
+          <ItSniperLogoMark className="language-switcher-logo" />
         </span>
         <select
           aria-label={t("language.switcherLabel")}
@@ -45,9 +41,7 @@ export function LanguageSwitcher() {
             onClick={() => setLocale(item as Locale)}
             aria-label={t(`language.${item}`)}
           >
-            <span aria-hidden="true" className="language-switcher-flag">
-              {flags[item as Locale]}
-            </span>
+            {t(`language.${item}`)}
           </button>
         ))}
       </div>
