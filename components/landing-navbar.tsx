@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/i18n/i18n-provider";
+import { type Locale, SUPPORTED_LOCALES } from "@/lib/i18n/config";
 
 function ItSniperLogoMark() {
   return (
@@ -32,6 +34,12 @@ const navItems = [
 
 export function LandingNavbar({ ctaHref }: { ctaHref: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { locale, setLocale, t } = useI18n();
+  const flags: Record<Locale, string> = {
+    en: "🇬🇧",
+    fr: "🇫🇷",
+    es: "🇪🇸",
+  };
 
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : "";
@@ -45,7 +53,10 @@ export function LandingNavbar({ ctaHref }: { ctaHref: string }) {
       <div className="landing-navbar-inner">
         <a href="#" className="landing-navbar-brand" onClick={() => setIsMenuOpen(false)}>
           <ItSniperLogoMark />
-          <span>IT-SNIPER</span>
+          <span className="landing-navbar-brand-copy">
+            <strong>IT-SNIPER</strong>
+            <small>by MiravoxTech</small>
+          </span>
         </a>
 
         <nav className="landing-navbar-links" aria-label="Primary navigation">
@@ -54,9 +65,32 @@ export function LandingNavbar({ ctaHref }: { ctaHref: string }) {
               {item.label}
             </a>
           ))}
+          <details className="landing-navbar-dropdown">
+            <summary>Who made IT-SNIPER</summary>
+            <div className="landing-navbar-dropdown-menu">
+              <a href="https://www.miravoxtech.com" target="_blank" rel="noreferrer">
+                MiravoxTech
+              </a>
+            </div>
+          </details>
         </nav>
 
         <div className="landing-navbar-cta">
+          <label className="landing-navbar-lang">
+            <span className="sr-only">{t("language.switcherLabel")}</span>
+            <select
+              aria-label={t("language.switcherLabel")}
+              className="landing-navbar-lang-select"
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as Locale)}
+            >
+              {SUPPORTED_LOCALES.map((item) => (
+                <option key={item} value={item}>
+                  {t(`language.${item}`)}
+                </option>
+              ))}
+            </select>
+          </label>
           <Link href={ctaHref} className="landing-navbar-button">
             Start free
           </Link>
@@ -98,6 +132,29 @@ export function LandingNavbar({ ctaHref }: { ctaHref: string }) {
                 {item.label}
               </a>
             ))}
+            <details className="landing-navbar-dropdown landing-navbar-dropdown-mobile">
+              <summary>Who made IT-SNIPER</summary>
+              <div className="landing-navbar-dropdown-menu">
+                <a href="https://www.miravoxtech.com" target="_blank" rel="noreferrer" onClick={() => setIsMenuOpen(false)}>
+                  MiravoxTech
+                </a>
+              </div>
+            </details>
+            <label className="landing-navbar-lang landing-navbar-lang-mobile">
+              <span className="sr-only">{t("language.switcherLabel")}</span>
+              <select
+                aria-label={t("language.switcherLabel")}
+                className="landing-navbar-lang-select"
+                value={locale}
+                onChange={(event) => setLocale(event.target.value as Locale)}
+              >
+                {SUPPORTED_LOCALES.map((item) => (
+                  <option key={item} value={item}>
+                    {flags[item]} {t(`language.${item}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
           </nav>
 
           <Link href={ctaHref} onClick={() => setIsMenuOpen(false)} className="landing-navbar-button landing-navbar-drawer-cta">
