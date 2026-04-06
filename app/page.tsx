@@ -91,7 +91,7 @@ export default async function LandingPage() {
           position: "relative",
           maxWidth: 1180,
           margin: "0 auto",
-          padding: "2rem 1rem 5rem",
+          padding: "6.5rem 1rem 5rem",
           display: "grid",
           gap: "5rem",
         }}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function ItSniperLogoMark() {
   return (
@@ -33,88 +33,74 @@ const navItems = [
 export function LandingNavbar({ ctaHref }: { ctaHref: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMenuOpen]);
+
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center justify-between px-4">
-        <a href="#" className="inline-flex items-center gap-2">
+    <header className="landing-navbar">
+      <div className="landing-navbar-inner">
+        <a href="#" className="landing-navbar-brand" onClick={() => setIsMenuOpen(false)}>
           <ItSniperLogoMark />
-          <span className="text-sm font-semibold tracking-[0.08em] text-slate-900">IT-SNIPER</span>
+          <span>IT-SNIPER</span>
         </a>
 
-        <nav className="hidden items-center gap-6 md:flex" aria-label="Primary navigation">
+        <nav className="landing-navbar-links" aria-label="Primary navigation">
           {navItems.map((item) => (
-            <a key={item.href} href={item.href} className="text-sm font-medium text-slate-600 transition-colors hover:text-black">
+            <a key={item.href} href={item.href}>
               {item.label}
             </a>
           ))}
         </nav>
 
-        <div className="hidden md:block">
-          <Link
-            href={ctaHref}
-            className="inline-flex h-10 items-center rounded-lg bg-black px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-          >
+        <div className="landing-navbar-cta">
+          <Link href={ctaHref} className="landing-navbar-button">
             Start free
           </Link>
         </div>
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700 md:hidden"
+          className="landing-navbar-menu-toggle"
           aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={isMenuOpen}
           onClick={() => setIsMenuOpen((prev) => !prev)}
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg viewBox="0 0 24 24" className="landing-navbar-menu-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             {isMenuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
           </svg>
         </button>
       </div>
 
-      <div className={`fixed inset-0 z-50 md:hidden ${isMenuOpen ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!isMenuOpen}>
-        <button
-          type="button"
-          onClick={() => setIsMenuOpen(false)}
-          className={`absolute inset-0 bg-slate-950/45 transition-opacity duration-200 ${isMenuOpen ? "opacity-100" : "opacity-0"}`}
-          aria-label="Close menu overlay"
-        />
-        <aside
-          className={`absolute right-0 top-0 flex h-full w-full max-w-xs flex-col bg-white p-6 transition-transform duration-200 ease-out ${
-            isMenuOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold tracking-[0.08em] text-slate-900">IT-SNIPER</span>
+      <div className={`landing-navbar-overlay ${isMenuOpen ? "is-open" : ""}`} aria-hidden={!isMenuOpen}>
+        <button type="button" onClick={() => setIsMenuOpen(false)} className="landing-navbar-overlay-backdrop" aria-label="Close menu overlay" />
+        <aside className="landing-navbar-drawer">
+          <div className="landing-navbar-drawer-header">
+            <span>IT-SNIPER</span>
             <button
               type="button"
               onClick={() => setIsMenuOpen(false)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-700"
+              className="landing-navbar-menu-toggle"
               aria-label="Close navigation menu"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg viewBox="0 0 24 24" className="landing-navbar-menu-icon" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
             </button>
           </div>
 
-          <nav className="mt-8 grid gap-2" aria-label="Mobile navigation">
+          <nav className="landing-navbar-drawer-links" aria-label="Mobile navigation">
             {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsMenuOpen(false)}
-                className="inline-flex min-h-11 items-center rounded-lg px-3 text-base font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-black"
-              >
+              <a key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)}>
                 {item.label}
               </a>
             ))}
           </nav>
 
-          <Link
-            href={ctaHref}
-            onClick={() => setIsMenuOpen(false)}
-            className="mt-8 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-black px-4 text-base font-semibold text-white"
-          >
+          <Link href={ctaHref} onClick={() => setIsMenuOpen(false)} className="landing-navbar-button landing-navbar-drawer-cta">
             Start free
           </Link>
         </aside>
