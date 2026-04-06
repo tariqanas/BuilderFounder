@@ -15,6 +15,9 @@ export function LanguageSwitcher() {
     <div className="language-switcher-wrap">
       <label className="language-switcher-select-label">
         <span className="sr-only">{t("language.switcherLabel")}</span>
+        <span aria-hidden="true" className="language-switcher-select-icon">
+          🌐
+        </span>
         <select
           aria-label={t("language.switcherLabel")}
           className="language-switcher-select"
@@ -27,6 +30,9 @@ export function LanguageSwitcher() {
             </option>
           ))}
         </select>
+        <span aria-hidden="true" className="language-switcher-select-chevron">
+          ˅
+        </span>
       </label>
 
       <div className="language-switcher language-switcher-mobile" role="group" aria-label={t("language.switcherLabel")}>
