@@ -386,6 +386,7 @@ label {
 .language-switcher-select-label {
   display: inline-flex;
   align-items: center;
+  position: relative;
 }
 
 .language-switcher-select {
@@ -393,11 +394,33 @@ label {
   min-width: 92px;
   border: 1px solid #323a59;
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+  padding: 0.35rem 1.85rem 0.35rem 2rem;
   background: rgba(10, 13, 23, 0.9);
   color: #c1caea;
   font-size: 0.78rem;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.language-switcher-select-icon,
+.language-switcher-select-chevron {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #c1caea;
+  pointer-events: none;
+}
+
+.language-switcher-select-icon {
+  left: 0.72rem;
+  font-size: 0.9rem;
+}
+
+.language-switcher-select-chevron {
+  right: 0.72rem;
+  font-size: 0.8rem;
 }
 
 .language-switcher {
