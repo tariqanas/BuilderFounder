@@ -702,16 +702,17 @@ label {
   justify-content: center;
   min-height: 40px;
   border-radius: 10px;
-  background: #f8fafc;
-  color: #020617;
+  background: linear-gradient(135deg, #3f6dff, #6b4cff);
+  color: #ffffff;
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0 1rem;
   border: 1px solid transparent;
+  transition: filter 0.18s ease;
 }
 
 .landing-navbar-button:hover {
-  background: #e2e8f0;
+  filter: brightness(1.08);
 }
 
 .landing-navbar-dropdown {
