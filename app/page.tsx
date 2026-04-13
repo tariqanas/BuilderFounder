@@ -12,7 +12,38 @@ async function resolveStartCtaHref() {
   return !error && data.user ? "/billing" : "/login";
 }
 
-const problems = ["You waste hours searching for missions", "You miss high-quality opportunities", "You apply too late"];
+const problems = [
+  {
+    title: "Too much time searching",
+    description: "You jump between platforms for hours just to find a few real leads.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M16 16l4.2 4.2" />
+      </svg>
+    ),
+  },
+  {
+    title: "Missed opportunities",
+    description: "The best missions are gone before you even see them.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path d="M12 4v8l5 3" />
+        <circle cx="12" cy="12" r="8.5" />
+      </svg>
+    ),
+  },
+  {
+    title: "Too slow to act",
+    description: "Manual applications drain your energy and kill your momentum.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path d="M12 3v7l3.5 3.5" />
+        <path d="M5.5 8.5A8.5 8.5 0 1 1 4 13" />
+      </svg>
+    ),
+  },
+] as const;
 
 const steps = [
   "We scan job sources",
@@ -258,15 +289,32 @@ export default async function LandingPage() {
         <section id="features" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>The problem</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Searching is killing your momentum</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>You&apos;re losing freelance opportunities every day</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 230px),1fr))" }}>
+          <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 240px),1fr))" }}>
             {problems.map((problem) => (
-              <article key={problem} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
-                <p style={{ margin: 0, color: "#f1f5f9", fontWeight: 530, fontSize: "1.04rem" }}>{problem}</p>
+              <article key={problem.title} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem", display: "grid", gap: "0.6rem" }}>
+                <span
+                  style={{
+                    width: "2rem",
+                    height: "2rem",
+                    borderRadius: 999,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid rgba(96,165,250,.35)",
+                    color: "#bfdbfe",
+                    background: "rgba(59,130,246,.12)",
+                  }}
+                >
+                  {problem.icon}
+                </span>
+                <p style={{ margin: 0, color: "#f8fafc", fontWeight: 620, fontSize: "1.04rem" }}>{problem.title}</p>
+                <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.45, fontSize: "0.94rem" }}>{problem.description}</p>
               </article>
             ))}
           </div>
+          <p style={{ margin: "0.2rem 0 0", textAlign: "center", color: "#99f6e4", fontWeight: 560, fontSize: "1rem" }}>There is a better way.</p>
         </section>
 
         <section id="how-it-works" style={{ display: "grid", gap: "1rem" }}>
