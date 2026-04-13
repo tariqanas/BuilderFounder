@@ -484,7 +484,6 @@ label {
 .landing-bg {
   width: 100%;
   max-width: 100%;
-  overflow-x: clip;
 }
 
 .landing-bg::before,

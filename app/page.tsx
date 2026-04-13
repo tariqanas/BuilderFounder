@@ -62,16 +62,7 @@ export default async function LandingPage() {
   const ctaHref = await resolveStartCtaHref();
 
   return (
-    <main
-      className="landing-bg"
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        overflowX: "hidden",
-        background: "#070B14",
-        color: "#f8fbff",
-      }}
-    >
+    <main className="landing-bg relative min-h-screen overflow-x-hidden" style={{ background: "#070B14", color: "#f8fbff" }}>
       <div aria-hidden="true" className="landing-bg-grid" />
       <div aria-hidden="true" className="landing-bg-nodes" />
       <div aria-hidden="true" className="landing-bg-pulse" />
