@@ -546,24 +546,33 @@ export default async function LandingPage() {
         <section
           style={{
             borderRadius: 18,
-            border: "1px solid rgba(59,130,246,.34)",
-            background: "linear-gradient(135deg, rgba(30,58,138,.46), rgba(2,6,23,.95))",
-            padding: "2rem 1.2rem",
+            border: "1px solid rgba(96,165,250,.58)",
+            background: "linear-gradient(140deg, rgba(30,64,175,.68), rgba(15,23,42,.95) 55%, rgba(2,6,23,.98))",
+            padding: "2.5rem 1.2rem",
             textAlign: "center",
             display: "grid",
-            gap: "0.9rem",
+            gap: "1rem",
             justifyItems: "center",
+            boxShadow: "0 22px 60px rgba(37,99,235,.28), inset 0 0 0 1px rgba(191,219,254,.18)",
           }}
         >
           <h2 style={{ margin: 0, fontSize: "clamp(1.65rem,4.4vw,3.2rem)", lineHeight: 1.1, maxWidth: 760, letterSpacing: "-0.03em" }}>
-            Stop searching. Start receiving opportunities.
+            Your next freelance mission is waiting.
           </h2>
           <p style={{ margin: 0, maxWidth: 690, fontSize: "clamp(0.98rem,2vw,1.15rem)", color: "#dbeafe", lineHeight: 1.6 }}>
-            This is not a job board. This is your AI mission radar. Start now and be first on the best freelance deals.
+            Let IT-SNIPER do the work while you focus on closing clients.
           </p>
-          <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.84rem 1.35rem", borderRadius: 12 }}>
+          <Link
+            href={ctaHref}
+            className="btn btn-primary"
+            style={{ padding: "1rem 2.15rem", borderRadius: 13, fontSize: "1.08rem", fontWeight: 760, minWidth: "220px", justifyContent: "center", boxShadow: "0 14px 34px rgba(96,165,250,.45)" }}
+          >
             Start free
           </Link>
+          <p style={{ margin: "-0.1rem 0 0", color: "#99f6e4", fontSize: "0.91rem", fontWeight: 620 }}>Don&apos;t miss your next opportunity.</p>
+          <a href="#how-it-works" style={{ color: "#bfdbfe", fontSize: "0.92rem", textDecoration: "underline", textUnderlineOffset: "0.2em" }}>
+            See how it works
+          </a>
         </section>
 
         <footer style={{ paddingTop: "0.35rem", borderTop: "1px solid #1e293b", color: "#94a3b8", display: "flex", justifyContent: "space-between", gap: "0.8rem", flexWrap: "wrap" }}>
