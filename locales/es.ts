@@ -75,7 +75,7 @@ const es = {
       features: "Funciones",
       howItWorks: "Cómo funciona",
       pricing: "Precios",
-      whoMade: "Quién creó IT-SNIPER",
+      whoMade: "¿Quiénes somos?",
       primaryNavAria: "Navegación principal",
       mobileNavAria: "Navegación móvil",
       openMenu: "Abrir menú de navegación",
