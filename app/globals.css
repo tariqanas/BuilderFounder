@@ -481,6 +481,12 @@ label {
   margin: 0;
 }
 
+.landing-bg {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 .landing-bg::before,
 .landing-bg::after {
   content: "";
