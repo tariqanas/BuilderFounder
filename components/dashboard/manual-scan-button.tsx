@@ -45,12 +45,7 @@ export function ManualScanButton({
         setRemaining(payload.remaining);
       }
 
-      const createdMissions = typeof payload?.createdMissions === "number" ? payload.createdMissions : 0;
-      if (createdMissions > 0) {
-        setToast(`${createdMissions} new mission${createdMissions > 1 ? "s" : ""} found`);
-      } else {
-        setToast("Scan complete: no new missions found");
-      }
+      setToast("New missions loaded");
       router.refresh();
     } catch {
       setToast("Limit reached today");
@@ -62,8 +57,15 @@ export function ManualScanButton({
 
   return (
     <div className="manual-scan-wrap">
-      <button type="button" className="btn" onClick={triggerScan} disabled={loading || remaining <= 0}>
-        {loading ? loadingLabel : buttonLabel}
+      <button type="button" className="btn" onClick={triggerScan} disabled={loading || remaining <= 0} aria-busy={loading}>
+        {loading ? (
+          <span className="btn-loading">
+            <span className="spinner" aria-hidden="true" />
+            {loadingLabel}
+          </span>
+        ) : (
+          buttonLabel
+        )}
       </button>
       <p className="muted manual-scan-count">{remaining} manual scans left today</p>
       {toast ? <p className="badge badge-info toast-badge">{toast}</p> : null}
