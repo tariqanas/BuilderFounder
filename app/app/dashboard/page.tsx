@@ -146,7 +146,7 @@ export default async function DashboardPage({
           <span className="radar-status">● Radar active</span>
         </div>
         <div className="dashboard-header-action">
-          <ManualScanButton initialRemaining={refreshStatus.remaining} buttonLabel="Refresh radar" loadingLabel="Refreshing radar..." />
+          <ManualScanButton initialRemaining={refreshStatus.remaining} buttonLabel="Refresh radar" loadingLabel="Scanning..." />
         </div>
       </section>
 

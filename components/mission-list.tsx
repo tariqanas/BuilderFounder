@@ -41,15 +41,25 @@ const shortDescription = (mission: MissionItem) => {
 
 export function MissionList({ missions }: { missions: MissionItem[] }) {
   const [toast, setToast] = useState<string | null>(null);
+  const [copyingMissionId, setCopyingMissionId] = useState<string | null>(null);
+  const [copiedMissionId, setCopiedMissionId] = useState<string | null>(null);
 
-  const copyPitch = async (pitch: string) => {
+  const copyPitch = async (missionId: string, pitch: string) => {
+    if (copyingMissionId) return;
+    setCopyingMissionId(missionId);
     try {
       await navigator.clipboard.writeText(pitch ?? "");
-      setToast("Pitch copied");
+      setCopiedMissionId(missionId);
+      setToast("Copied ✓");
     } catch {
       setToast("Clipboard unavailable");
+    } finally {
+      setCopyingMissionId(null);
     }
-    setTimeout(() => setToast(null), 1800);
+    setTimeout(() => {
+      setToast(null);
+      setCopiedMissionId((current) => (current === missionId ? null : current));
+    }, 1400);
   };
 
   const sortedMissions = useMemo(() => [...missions].sort((a, b) => b.score - a.score), [missions]);
@@ -57,9 +67,8 @@ export function MissionList({ missions }: { missions: MissionItem[] }) {
   if (!sortedMissions.length) {
     return (
       <div className="empty-state">
-        <p>No missions detected yet.</p>
-        <p className="muted">Your radar is active and scanning freelance markets.</p>
-        <p className="muted">Your radar scans the market continuously and updates your signals throughout the day.</p>
+        <h3>No missions yet</h3>
+        <p className="muted">Your radar is active. New opportunities will appear after the next scan.</p>
       </div>
     );
   }
@@ -107,8 +116,13 @@ export function MissionList({ missions }: { missions: MissionItem[] }) {
                   View mission
                 </span>
               )}
-              <button className="btn" onClick={() => copyPitch(mission.pitch ?? "")}>
-                Copy pitch
+              <button
+                className="btn"
+                onClick={() => copyPitch(mission.id, mission.pitch ?? "")}
+                disabled={copyingMissionId !== null}
+                aria-busy={copyingMissionId === mission.id}
+              >
+                {copiedMissionId === mission.id ? "Copied ✓" : "Copy pitch"}
               </button>
             </div>
           </article>

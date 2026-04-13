@@ -128,6 +128,12 @@ a {
   transform: translateY(-1px);
 }
 
+.btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, #3f6dff, #6b4cff);
   border: 1px solid transparent;
@@ -377,6 +383,10 @@ label {
   background: rgba(19, 22, 36, 0.6);
 }
 
+.empty-state h3 {
+  margin: 0 0 0.35rem;
+}
+
 .empty-state p {
   margin: 0.15rem 0;
 }
@@ -384,6 +394,7 @@ label {
 .toast-badge {
   width: fit-content;
   margin: 0;
+  animation: toast-enter 0.2s ease;
 }
 
 .skeleton {
@@ -403,9 +414,61 @@ label {
   animation: shimmer 1.4s infinite;
 }
 
+.skeleton-line {
+  background: rgba(58, 65, 89, 0.88);
+  border-color: #313750;
+}
+
+.mission-card-skeleton {
+  border: 1px solid #2a3557;
+  border-radius: 16px;
+  padding: 1rem;
+  background: rgba(12, 16, 27, 0.95);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.mission-card-skeleton-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 255, 255, 0.95);
+  animation: spin 0.75s linear infinite;
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
