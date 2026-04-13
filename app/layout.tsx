@@ -16,8 +16,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getRequestLocale();
 
   return (
-    <html lang={locale}>
-      <body>
+    <html lang={locale} className="h-auto" style={{ height: "auto" }}>
+      <body className="h-auto overflow-x-hidden" style={{ height: "auto", overflowX: "hidden", overflowY: "visible" }}>
         <I18nProvider initialLocale={locale}>{children}</I18nProvider>
       </body>
     </html>
