@@ -136,6 +136,27 @@ const pricingPlans = [
   },
 ] as const;
 
+const socialProofMetrics = [
+  { value: "500+", label: "missions analyzed daily" },
+  { value: "120+", label: "freelancers using IT-SNIPER weekly" },
+  { value: "40+", label: "new opportunities detected every day" },
+] as const;
+
+const testimonials = [
+  {
+    quote: "I found better missions in minutes instead of hours.",
+    role: "Amélie — Frontend Freelancer",
+  },
+  {
+    quote: "The alerts helped me apply early and get more replies.",
+    role: "Nico — DevOps Freelancer",
+  },
+  {
+    quote: "I now focus on qualified leads instead of endless scrolling.",
+    role: "Clara — Product Freelancer",
+  },
+] as const;
+
 export default async function LandingPage() {
   const ctaHref = await resolveStartCtaHref();
 
@@ -458,20 +479,28 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section style={{ borderRadius: 18, border: "1px solid #1e293b", background: "rgba(15,23,42,.72)", padding: "1.2rem" }}>
-          <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 260px),1fr))" }}>
-            <div style={{ display: "grid", gap: "0.5rem" }}>
-              <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Social proof</p>
-              <h2 style={{ margin: 0, fontSize: "clamp(1.45rem,3vw,2.3rem)", letterSpacing: "-0.02em" }}>Used by freelancers across Europe</h2>
-            </div>
-            <div style={{ display: "grid", gap: "0.6rem" }}>
-              <article style={{ border: "1px solid #1e293b", borderRadius: 12, background: "rgba(2,6,23,0.75)", padding: "0.8rem" }}>
-                <p style={{ margin: 0, fontSize: "1.02rem", color: "#f8fafc" }}>Find missions faster than ever.</p>
+        <section style={{ borderRadius: 18, border: "1px solid #1e293b", background: "rgba(15,23,42,.72)", padding: "1.2rem", display: "grid", gap: "1rem" }}>
+          <div style={{ display: "grid", gap: "0.35rem" }}>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.45rem,3vw,2.3rem)", letterSpacing: "-0.02em" }}>Used by freelancers across Europe</h2>
+            <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.95rem" }}>Built by engineers, for freelancers.</p>
+          </div>
+
+          <div style={{ display: "grid", gap: "0.7rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 190px),1fr))" }}>
+            {socialProofMetrics.map((metric) => (
+              <article key={metric.label} style={{ border: "1px solid rgba(71,85,105,.65)", borderRadius: 12, background: "rgba(2,6,23,0.78)", padding: "0.85rem" }}>
+                <p style={{ margin: 0, color: "#f8fafc", fontSize: "1.55rem", fontWeight: 700 }}>{metric.value}</p>
+                <p style={{ margin: "0.22rem 0 0", color: "#cbd5e1", fontSize: "0.9rem", lineHeight: 1.4 }}>{metric.label}</p>
               </article>
-              <article style={{ border: "1px solid #1e293b", borderRadius: 12, background: "rgba(2,6,23,0.75)", padding: "0.8rem" }}>
-                <p style={{ margin: 0, fontSize: "1.02rem", color: "#f8fafc" }}>Less searching. More client conversations.</p>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gap: "0.65rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 240px),1fr))" }}>
+            {testimonials.map((item) => (
+              <article key={item.role} style={{ border: "1px solid #1e293b", borderRadius: 12, background: "rgba(2,6,23,0.75)", padding: "0.9rem", display: "grid", gap: "0.55rem" }}>
+                <p style={{ margin: 0, fontSize: "0.98rem", color: "#f8fafc", lineHeight: 1.5 }}>&ldquo;{item.quote}&rdquo;</p>
+                <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.86rem" }}>{item.role}</p>
               </article>
-            </div>
+            ))}
           </div>
         </section>
 
