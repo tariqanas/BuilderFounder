@@ -278,12 +278,20 @@ label {
 }
 
 .mission-card {
-  border: 1px solid #252d45;
-  border-radius: 14px;
-  padding: 0.9rem;
+  border: 1px solid #2a3557;
+  border-radius: 16px;
+  padding: 1rem;
   background: rgba(12, 16, 27, 0.95);
   display: grid;
-  gap: 0.8rem;
+  gap: 0.85rem;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  cursor: pointer;
+}
+
+.mission-card:hover {
+  transform: translateY(-2px);
+  border-color: #4c63a6;
+  box-shadow: 0 10px 24px rgba(6, 11, 26, 0.4);
 }
 
 .mission-header {
@@ -293,33 +301,45 @@ label {
   gap: 0.8rem;
 }
 
-.mission-header h3 {
-  margin: 0;
-  font-size: 1rem;
+.mission-title-wrap {
+  min-width: 0;
 }
 
-.mission-company {
-  margin: 0.3rem 0 0;
+.mission-header h3 {
+  margin: 0;
+  font-size: 1.24rem;
+  line-height: 1.25;
+  font-weight: 760;
+  letter-spacing: -0.01em;
+}
+
+.mission-meta-line {
+  margin: 0.38rem 0 0;
+  color: #95a4d3;
+  font-size: 0.82rem;
 }
 
 .mission-badges {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.4rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
 }
 
-.mission-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  font-size: 0.92rem;
+.mission-score {
+  border-radius: 999px;
+  border: 1px solid #684016;
+  background: linear-gradient(135deg, rgba(245, 139, 37, 0.2), rgba(245, 139, 37, 0.08));
+  color: #ffd6ad;
+  font-weight: 700;
+  font-size: 0.79rem;
+  padding: 0.28rem 0.65rem;
+  white-space: nowrap;
 }
 
 .chip-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
 }
 
@@ -328,8 +348,20 @@ label {
   border: 1px solid #2f395d;
   background: rgba(40, 51, 90, 0.2);
   color: #b8c8f8;
-  font-size: 0.76rem;
-  padding: 0.2rem 0.65rem;
+  font-size: 0.72rem;
+  padding: 0.18rem 0.58rem;
+}
+
+.mission-description {
+  margin: 0;
+  color: #d5dcf4;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .mission-actions {

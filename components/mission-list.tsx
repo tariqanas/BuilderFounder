@@ -17,22 +17,26 @@ type MissionItem = {
   dayRate: number | null;
 };
 
-const scoreTier = (score: number) => {
-  if (score >= 90) return { label: "Perfect match", tone: "badge-success" };
-  if (score >= 80) return { label: "Strong match", tone: "badge-info" };
-  return { label: "Good match", tone: "badge-warning" };
-};
-
 const reasonToChip = (reason: string) => {
   const cleanReason = reason.trim();
   const lower = cleanReason.toLowerCase();
 
-  if (lower.includes("stack") || lower.includes("tech") || lower.includes("skill")) return "Stack match";
-  if (lower.includes("remote")) return "Remote";
-  if (lower.includes("country") || lower.includes("location") || lower.includes("france")) return "Country";
-  if (lower.includes("rate") || lower.includes("budget") || lower.includes("day")) return "Rate";
+  if (lower.includes("react")) return "React";
+  if (lower.includes("node")) return "Node";
+  if (lower.includes("aws")) return "AWS";
+  if (lower.includes("typescript")) return "TypeScript";
+  if (lower.includes("javascript")) return "JavaScript";
+  if (lower.includes("python")) return "Python";
+  if (lower.includes("devops")) return "DevOps";
+  if (lower.includes("cloud")) return "Cloud";
+  if (lower.includes("stack") || lower.includes("tech") || lower.includes("skill")) return "Tech fit";
 
-  return cleanReason.length > 22 ? `${cleanReason.slice(0, 22)}…` : cleanReason;
+  return cleanReason.length > 18 ? `${cleanReason.slice(0, 18)}…` : cleanReason;
+};
+
+const shortDescription = (mission: MissionItem) => {
+  const baseText = mission.pitch?.trim() || "Great fit with your profile, remote-friendly setup, and a clear chance to apply quickly.";
+  return baseText.replace(/\s+/g, " ");
 };
 
 export function MissionList({ missions }: { missions: MissionItem[] }) {
@@ -64,47 +68,43 @@ export function MissionList({ missions }: { missions: MissionItem[] }) {
     <div className="mission-grid">
       {toast && <p className="badge badge-info toast-badge">{toast}</p>}
       {sortedMissions.map((mission) => {
-        const missionTier = scoreTier(mission.score);
         const isNew = Date.now() - new Date(mission.createdAt).getTime() <= 24 * 60 * 60 * 1000;
-        const locationText = `${mission.country || "Global"} • ${mission.remote || "Remote"}`;
-        const reasonChips = (mission.reasons.length ? mission.reasons : ["Stack match", "Remote", "Country", "Rate"])
+        const metaLine = [mission.company || "Unknown company", mission.remote || "Remote", mission.country || "Global"].join(" • ");
+        const techTags = (mission.reasons.length ? mission.reasons : ["React", "Remote", "Cloud"])
           .map(reasonToChip)
           .slice(0, 4);
 
         return (
           <article key={mission.id} className="mission-card">
             <div className="mission-header">
-              <div>
+              <div className="mission-title-wrap">
                 <h3>{mission.title}</h3>
-                <p className="muted mission-company">{mission.company}</p>
+                <p className="mission-meta-line">{metaLine}</p>
               </div>
               <div className="mission-badges">
-                <span className={`badge ${missionTier.tone}`}>{`${missionTier.label} • Score ${mission.score}`}</span>
+                <span className="mission-score">🔥 {`${mission.score}/100 match`}</span>
                 {isNew ? <span className="badge badge-new">NEW</span> : null}
               </div>
             </div>
 
-            <div className="mission-meta">
-              <span className="muted">{locationText}</span>
-              <span>{mission.dayRate ? `${mission.dayRate}€/day` : "Rate not specified"}</span>
-            </div>
-
-            <div className="chip-row">
-              {reasonChips.map((chip, index) => (
+            <div className="chip-row" aria-label="Tech stack">
+              {techTags.map((chip, index) => (
                 <span key={`${mission.id}-${chip}-${index}`} className="chip">
                   {chip}
                 </span>
               ))}
             </div>
 
+            <p className="mission-description">{shortDescription(mission)}</p>
+
             <div className="mission-actions">
               {mission.hasValidUrl ? (
                 <a className="btn btn-primary" href={mission.url} target="_blank" rel="noreferrer noopener">
-                  Open mission
+                  View mission
                 </a>
               ) : (
                 <span className="btn btn-primary" aria-disabled="true" style={{ opacity: 0.45, pointerEvents: "none" }}>
-                  Open mission
+                  View mission
                 </span>
               )}
               <button className="btn" onClick={() => copyPitch(mission.pitch ?? "")}>
