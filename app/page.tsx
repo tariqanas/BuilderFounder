@@ -88,8 +88,8 @@ export default async function LandingPage() {
           gap: "5rem",
         }}
       >
-        <section style={{ display: "grid", gap: "1.4rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 310px),1fr))", alignItems: "center" }}>
-          <div style={{ display: "grid", gap: "1.05rem" }}>
+        <section style={{ display: "grid", gap: "1.4rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 320px),1fr))", alignItems: "center" }}>
+          <div style={{ display: "grid", gap: "0.95rem" }}>
             <span
               style={{
                 display: "inline-flex",
@@ -105,22 +105,35 @@ export default async function LandingPage() {
                 textTransform: "uppercase",
               }}
             >
-              AI radar for freelance consultants
+              Freelance mission radar
             </span>
             <h1 style={{ margin: 0, maxWidth: 760, fontSize: "clamp(2.1rem,5.8vw,4.15rem)", lineHeight: 1.02, letterSpacing: "-0.03em" }}>
-              Find freelance missions automatically with AI
+              Stop searching. Get freelance missions sent to you.
             </h1>
-            <p style={{ margin: 0, maxWidth: 680, color: "#cbd5e1", fontSize: "clamp(1rem,2vw,1.16rem)", lineHeight: 1.6 }}>
-              IT-SNIPER scans the internet, scores opportunities, and generates your pitch — so you never miss high-value missions.
+            <p style={{ margin: 0, maxWidth: 680, color: "#cbd5e1", fontSize: "clamp(1rem,2vw,1.12rem)", lineHeight: 1.55 }}>
+              We scan new offers, rank your best matches, and draft your pitch so you can apply before everyone else.
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.72rem", marginTop: "0.35rem" }}>
-              <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.8rem 1.25rem", borderRadius: 12 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.72rem", marginTop: "0.5rem" }}>
+              <Link
+                href={ctaHref}
+                className="btn btn-primary"
+                style={{
+                  padding: "0.95rem 1.5rem",
+                  borderRadius: 13,
+                  fontSize: "1.03rem",
+                  fontWeight: 700,
+                  boxShadow: "0 14px 34px rgba(59,130,246,.35)",
+                }}
+              >
                 Start free
               </Link>
               <a href="#how-it-works" className="btn" style={{ padding: "0.8rem 1.25rem", borderRadius: 12 }}>
                 See how it works
               </a>
             </div>
+            <p style={{ margin: "0.2rem 0 0", color: "#99f6e4", fontSize: "0.9rem", fontWeight: 560 }}>
+              New missions detected daily — don&apos;t miss your next opportunity.
+            </p>
             <div style={{ marginTop: "0.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 150px),1fr))", gap: "0.62rem", maxWidth: 620 }}>
               {[
                 ["24/7", "mission scanning"],
@@ -135,7 +148,7 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: "0.85rem" }}>
+          <div style={{ display: "grid", gap: "0.8rem" }}>
             <aside
               style={{
                 borderRadius: 16,
@@ -198,9 +211,27 @@ export default async function LandingPage() {
                 </div>
                 <div style={{ display: "grid", gap: "0.65rem" }}>
                   {[
-                    { role: "Senior DevOps Lead", score: "95%", rate: "€780/day", badge: "High urgency" },
-                    { role: "Cloud Architect - FinTech", score: "91%", rate: "€850/day", badge: "Fresh mission" },
-                    { role: "Kubernetes Platform Engineer", score: "88%", rate: "€730/day", badge: "Great fit" },
+                    {
+                      role: "Senior DevOps Lead",
+                      score: "95%",
+                      rate: "€780/day",
+                      badge: "Apply in 2h",
+                      company: "Scale-up · Paris · Remote 3d/w",
+                    },
+                    {
+                      role: "Cloud Architect - FinTech",
+                      score: "91%",
+                      rate: "€850/day",
+                      badge: "Posted 45 min ago",
+                      company: "FinTech group · Brussels · Hybrid",
+                    },
+                    {
+                      role: "Kubernetes Platform Engineer",
+                      score: "88%",
+                      rate: "€730/day",
+                      badge: "2 similar wins",
+                      company: "Consulting firm · Lyon · Remote",
+                    },
                   ].map((mission) => (
                     <article key={mission.role} style={{ border: "1px solid #1e293b", borderRadius: 12, background: "rgba(2,6,23,0.8)", padding: "0.78rem" }}>
                       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: "0.6rem" }}>
@@ -208,10 +239,13 @@ export default async function LandingPage() {
                         <span className="badge badge-info">Score {mission.score}</span>
                       </div>
                       <p style={{ margin: "0.45rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                        {mission.rate} · {mission.badge}
+                        {mission.rate} · {mission.company}
+                      </p>
+                      <p style={{ margin: "0.42rem 0 0", color: "#fcd34d", fontSize: "0.8rem", fontWeight: 570 }}>
+                        {mission.badge}
                       </p>
                       <p style={{ margin: "0.48rem 0 0", color: "#cbd5e1", fontSize: "0.83rem" }}>
-                        AI pitch ready: “I delivered this stack in production and can onboard fast.”
+                        Pitch draft ready: “I&apos;ve shipped this stack in production and can start quickly.”
                       </p>
                     </article>
                   ))}
