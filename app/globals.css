@@ -165,6 +165,61 @@ label {
   gap: 1rem;
 }
 
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dashboard-header-main {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dashboard-greeting {
+  margin: 0;
+  font-size: clamp(1.3rem, 2.6vw, 1.85rem);
+  font-weight: 700;
+}
+
+.dashboard-subtext {
+  margin: 0;
+  color: #b5bfdc;
+}
+
+.radar-status {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(87, 205, 121, 0.45);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  color: #8bebb0;
+  background: rgba(60, 160, 92, 0.15);
+  font-size: 0.82rem;
+}
+
+.dashboard-header-action {
+  min-width: 220px;
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.kpi-card {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.kpi-card strong {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1;
+}
+
 .notice {
   margin: 0;
   border: 1px solid #33416f;
@@ -183,6 +238,17 @@ label {
 .status-card {
   display: grid;
   gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header-action {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .kpi-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card-link {
