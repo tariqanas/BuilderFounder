@@ -109,30 +109,42 @@ const features = [
 const pricingPlans = [
   {
     name: "Free",
-    price: "0€",
-    subtitle: "Forever",
-    features: ["Unlimited profile setup", "Basic mission discovery", "Email support"],
+    price: "€0",
+    subtitle: "Great to test the workflow",
+    valueLine: "Find missions without paying upfront",
+    description: "Perfect if you want to explore the platform before upgrading.",
+    features: ["Limited missions each week", "Basic mission access", "Standard support"],
+    cta: "Start free",
+    riskReducer: "No commitment",
     border: "1px solid rgba(148,163,184,0.45)",
     background: "linear-gradient(160deg, rgba(30,41,59,.9), rgba(15,23,42,.72))",
     popular: false,
   },
   {
     name: "Pro",
-    price: "39€",
-    subtitle: "3 missions per week",
-    features: ["AI-ranked opportunities", "Weekly shortlist delivery", "Pitch templates included"],
-    border: "1px solid rgba(96,165,250,0.52)",
-    background: "linear-gradient(160deg, rgba(30,58,138,.85), rgba(15,23,42,.72))",
-    popular: false,
+    price: "€39",
+    subtitle: "For freelancers who want consistent wins",
+    valueLine: "Apply faster and get ahead of other freelancers",
+    description: "The best way to turn more mission matches into real client conversations.",
+    features: ["Unlimited missions", "AI matching to your profile", "Full pitch generation", "Priority access"],
+    cta: "Upgrade now",
+    riskReducer: "Cancel anytime",
+    border: "1px solid rgba(59,130,246,0.9)",
+    background: "linear-gradient(155deg, rgba(37,99,235,.38), rgba(30,58,138,.82) 45%, rgba(15,23,42,.9))",
+    popular: true,
   },
   {
     name: "Realtime",
-    price: "49€",
-    subtitle: "Realtime",
-    features: ["Instant mission alerts", "Priority scoring and matching", "Fast-track support"],
-    border: "1px solid rgba(250,204,21,0.75)",
-    background: "linear-gradient(155deg, rgba(161,98,7,.35), rgba(30,64,175,.82))",
-    popular: true,
+    price: "€59",
+    subtitle: "For teams and urgent opportunities",
+    valueLine: "React instantly when top missions go live",
+    description: "Built for users who need alerts the second opportunities appear.",
+    features: ["Everything in Pro", "Instant mission alerts", "Fast-lane support"],
+    cta: "Upgrade now",
+    riskReducer: "Cancel anytime",
+    border: "1px solid rgba(250,204,21,0.62)",
+    background: "linear-gradient(155deg, rgba(146,64,14,.32), rgba(30,64,175,.8))",
+    popular: false,
   },
 ] as const;
 
@@ -443,9 +455,10 @@ export default async function LandingPage() {
         <section id="pricing" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Pricing</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Choose the plan that matches your pace</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Start free, upgrade when you want more missions</h2>
+            <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.98rem" }}>Compare plans in seconds and pick what helps you win faster.</p>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 220px),1fr))" }}>
+          <div style={{ display: "grid", gap: "0.9rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 240px),1fr))", alignItems: "stretch" }}>
             {pricingPlans.map((plan) => (
               <article
                 key={plan.name}
@@ -453,8 +466,12 @@ export default async function LandingPage() {
                   borderRadius: 16,
                   border: plan.border,
                   background: plan.background,
-                  padding: "1rem",
-                  boxShadow: plan.popular ? "0 18px 52px rgba(250,204,21,.24)" : "0 14px 34px rgba(2,6,23,.45)",
+                  padding: plan.popular ? "1.2rem" : "1rem",
+                  boxShadow: plan.popular ? "0 22px 58px rgba(59,130,246,.35)" : "0 14px 34px rgba(2,6,23,.45)",
+                  transform: plan.popular ? "translateY(-4px)" : "none",
+                  display: "grid",
+                  gridTemplateRows: "auto auto auto 1fr auto auto",
+                  gap: "0.75rem",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: "0.7rem" }}>
@@ -468,12 +485,34 @@ export default async function LandingPage() {
                     </span>
                   ) : null}
                 </div>
-                <p style={{ margin: "0.8rem 0 0", fontSize: "2rem", fontWeight: 700 }}>{plan.price}</p>
-                <ul style={{ margin: "0.75rem 0 0", paddingLeft: "1.1rem", color: "#e2e8f0", display: "grid", gap: "0.42rem" }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: "2.05rem", fontWeight: 700, lineHeight: 1 }}>{plan.price}</p>
+                  <p style={{ margin: "0.2rem 0 0", color: "#cbd5e1", fontSize: "0.9rem" }}>per month</p>
+                </div>
+                <p style={{ margin: 0, color: plan.popular ? "#dbeafe" : "#cbd5e1", fontSize: "0.92rem", lineHeight: 1.45, fontWeight: 560 }}>{plan.valueLine}</p>
+                <p style={{ margin: 0, color: "#94a3b8", fontSize: "0.88rem", lineHeight: 1.4 }}>{plan.description}</p>
+                <ul style={{ margin: 0, paddingLeft: "1.1rem", color: "#e2e8f0", display: "grid", gap: "0.42rem" }}>
                   {plan.features.map((feature) => (
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
+                <div style={{ display: "grid", gap: "0.45rem" }}>
+                  <Link
+                    href={ctaHref}
+                    className={plan.popular ? "btn btn-primary" : "btn"}
+                    style={{
+                      borderRadius: 11,
+                      padding: "0.75rem 1rem",
+                      width: "100%",
+                      justifyContent: "center",
+                      fontWeight: 700,
+                      borderColor: plan.popular ? "rgba(147,197,253,.6)" : "rgba(148,163,184,.5)",
+                    }}
+                  >
+                    {plan.cta}
+                  </Link>
+                  <p style={{ margin: 0, textAlign: "center", color: "#94a3b8", fontSize: "0.78rem" }}>{plan.riskReducer}</p>
+                </div>
               </article>
             ))}
           </div>
