@@ -5,9 +5,15 @@ import { useRouter } from "next/navigation";
 
 type ManualScanButtonProps = {
   initialRemaining: number;
+  buttonLabel?: string;
+  loadingLabel?: string;
 };
 
-export function ManualScanButton({ initialRemaining }: ManualScanButtonProps) {
+export function ManualScanButton({
+  initialRemaining,
+  buttonLabel = "🔄 Manual Scan now",
+  loadingLabel = "Scanning...",
+}: ManualScanButtonProps) {
   const router = useRouter();
   const [remaining, setRemaining] = useState(initialRemaining);
   const [loading, setLoading] = useState(false);
@@ -57,7 +63,7 @@ export function ManualScanButton({ initialRemaining }: ManualScanButtonProps) {
   return (
     <div className="manual-scan-wrap">
       <button type="button" className="btn" onClick={triggerScan} disabled={loading || remaining <= 0}>
-        {loading ? "Scanning..." : "🔄 Manual Scan now"}
+        {loading ? loadingLabel : buttonLabel}
       </button>
       <p className="muted manual-scan-count">{remaining} manual scans left today</p>
       {toast ? <p className="badge badge-info toast-badge">{toast}</p> : null}

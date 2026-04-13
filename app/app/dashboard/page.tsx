@@ -28,6 +28,20 @@ const timeAgo = (value: string | null) => {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 };
 
+const getFirstName = (user: { email?: string | null; user_metadata?: Record<string, unknown> }) => {
+  const directFirstName = typeof user.user_metadata?.first_name === "string" ? user.user_metadata.first_name : null;
+  if (directFirstName?.trim()) return directFirstName.trim();
+
+  const fullName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null;
+  if (fullName?.trim()) {
+    const [firstToken] = fullName.trim().split(/\s+/);
+    if (firstToken) return firstToken;
+  }
+
+  const emailPrefix = user.email?.split("@")[0]?.trim();
+  return emailPrefix || "there";
+};
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -107,11 +121,49 @@ export default async function DashboardPage({
     })
     .filter((mission): mission is NonNullable<typeof mission> => mission !== null);
 
+  const firstName = getFirstName(user);
+  const today = new Date();
+  const isToday = (value: string) => {
+    const date = new Date(value);
+    return (
+      date.getUTCFullYear() === today.getUTCFullYear() &&
+      date.getUTCMonth() === today.getUTCMonth() &&
+      date.getUTCDate() === today.getUTCDate()
+    );
+  };
+  const newToday = safeMissions.filter((mission) => mission.createdAt && isToday(mission.createdAt)).length;
+
   return (
     <main className="dashboard-layout">
       {searchParams?.notice === "onboarding-activated" && <p className="notice">Success. Radar is now active.</p>}
       {searchParams?.notice === "profile-confirmed" && <p className="notice">Profile confirmed. Welcome to your dashboard.</p>}
       {searchParams?.notice === "cv-empty-text" && <p className="notice">CV saved, but no extractable text was detected in the PDF.</p>}
+
+      <section className="card dashboard-header">
+        <div className="dashboard-header-main">
+          <p className="dashboard-greeting">Welcome back, {firstName}</p>
+          <p className="dashboard-subtext">Your AI radar is scanning freelance missions and surfacing the best matches.</p>
+          <span className="radar-status">● Radar active</span>
+        </div>
+        <div className="dashboard-header-action">
+          <ManualScanButton initialRemaining={refreshStatus.remaining} buttonLabel="Refresh radar" loadingLabel="Refreshing radar..." />
+        </div>
+      </section>
+
+      <section className="kpi-strip" aria-label="Dashboard key metrics">
+        <article className="card kpi-card">
+          <span className="muted">Missions found</span>
+          <strong>{safeMissions.length}</strong>
+        </article>
+        <article className="card kpi-card">
+          <span className="muted">New today</span>
+          <strong>{newToday}</strong>
+        </article>
+        <article className="card kpi-card">
+          <span className="muted">Status</span>
+          <strong>Active</strong>
+        </article>
+      </section>
 
       <section className="status-grid">
         <article className="card status-card">
@@ -128,7 +180,6 @@ export default async function DashboardPage({
           <p className="muted">Last scan: {timeAgo(latestMatch?.created_at ?? null)}</p>
           <NotificationsToggle initialEnabled={settings?.notifications_enabled ?? true} />
           <p className="muted">Receive alerts when new matching missions are detected.</p>
-          <ManualScanButton initialRemaining={refreshStatus.remaining} />
         </article>
 
         <article className="card status-card">
