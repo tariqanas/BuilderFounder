@@ -65,10 +65,45 @@ const steps = [
 ] as const;
 
 const features = [
-  ["AI-powered matching", "Only relevant missions hit your radar."],
-  ["Automatic pitch generation", "Get a ready-to-send message in seconds."],
-  ["Daily mission alerts", "Receive fresh opportunities before others."],
-  ["No manual searching", "Stop scrolling. Focus on closing clients."],
+  {
+    title: "Find better missions faster",
+    description: "Stop wasting hours across job boards and focus only on high-fit opportunities.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="M16 16l4.2 4.2" />
+      </svg>
+    ),
+  },
+  {
+    title: "Be first on the best opportunities",
+    description: "Reach new missions early so you can apply before the inbox gets crowded.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path d="M12 4v8l5 3" />
+        <circle cx="12" cy="12" r="8.5" />
+      </svg>
+    ),
+  },
+  {
+    title: "Save hours every single week",
+    description: "Cut repetitive searching and outreach tasks so you can spend more time billing clients.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path d="M12 3v7l3.5 3.5" />
+        <path d="M5.5 8.5A8.5 8.5 0 1 1 4 13" />
+      </svg>
+    ),
+  },
+  {
+    title: "Win more missions with stronger pitches",
+    description: "Send tailored applications faster to stand out and improve your chances of getting hired.",
+    icon: (
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path d="M4 12.5 9 17l11-11" />
+      </svg>
+    ),
+  },
 ] as const;
 
 const pricingPlans = [
@@ -356,14 +391,29 @@ export default async function LandingPage() {
 
         <section style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
-            <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Value</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Everything you need to win faster</h2>
+            <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Why freelancers use IT-SNIPER</p>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Get more missions with less effort</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 220px),1fr))" }}>
-            {features.map(([title, description]) => (
-              <article key={title} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
-                <h3 style={{ margin: 0, fontSize: "1.18rem" }}>{title}</h3>
-                <p style={{ margin: "0.4rem 0 0", color: "#cbd5e1", lineHeight: 1.55 }}>{description}</p>
+          <div style={{ display: "grid", gap: "0.85rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 250px),1fr))" }}>
+            {features.map((feature) => (
+              <article key={feature.title} style={{ borderRadius: 14, border: "1px solid rgba(148,163,184,0.28)", background: "linear-gradient(160deg, rgba(15,23,42,.72), rgba(15,23,42,.56))", padding: "1rem", display: "grid", gap: "0.6rem" }}>
+                <span
+                  style={{
+                    width: "2rem",
+                    height: "2rem",
+                    borderRadius: 999,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "1px solid rgba(96,165,250,.4)",
+                    color: "#bfdbfe",
+                    background: "rgba(59,130,246,.12)",
+                  }}
+                >
+                  {feature.icon}
+                </span>
+                <h3 style={{ margin: 0, fontSize: "1.05rem", color: "#f8fafc" }}>{feature.title}</h3>
+                <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.93rem", lineHeight: 1.45 }}>{feature.description}</p>
               </article>
             ))}
           </div>
