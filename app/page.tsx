@@ -46,11 +46,23 @@ const problems = [
 ] as const;
 
 const steps = [
-  "We scan job sources",
-  "We score the best opportunities with AI",
-  "We generate your pitch instantly",
-  "You get notified and act fast",
-];
+  {
+    title: "Scan the web",
+    description: "We collect freelance missions from multiple sources.",
+  },
+  {
+    title: "Find the best matches",
+    description: "IT-SNIPER ranks opportunities based on your profile.",
+  },
+  {
+    title: "Generate your pitch",
+    description: "Get a ready-to-send personalized message.",
+  },
+  {
+    title: "Act fast",
+    description: "Apply before everyone else.",
+  },
+] as const;
 
 const features = [
   ["AI-powered matching", "Only relevant missions hit your radar."],
@@ -319,16 +331,24 @@ export default async function LandingPage() {
 
         <section id="how-it-works" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
-            <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>How it works</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>From search chaos to daily inbound missions</h2>
+            <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>How IT-SNIPER works</p>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>From discovery to application in seconds</h2>
           </div>
-          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 210px),1fr))" }}>
+          <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 235px),1fr))" }}>
             {steps.map((step, index) => (
-              <article key={step} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem" }}>
-                <span className="badge" style={{ borderColor: "rgba(96,165,250,0.35)", background: "rgba(59,130,246,0.1)", color: "#bfdbfe" }}>
-                  Step {index + 1}
-                </span>
-                <p style={{ margin: "0.72rem 0 0", fontSize: "1.03rem", color: "#f1f5f9", fontWeight: 530 }}>{step}</p>
+              <article key={step.title} style={{ borderRadius: 14, border: "1px solid #1e293b", background: "rgba(15,23,42,.62)", padding: "1rem", display: "grid", gap: "0.55rem" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+                  <span className="badge" style={{ borderColor: "rgba(96,165,250,0.35)", background: "rgba(59,130,246,0.1)", color: "#bfdbfe" }}>
+                    {index + 1}
+                  </span>
+                  {index < steps.length - 1 ? (
+                    <span style={{ color: "#60a5fa", fontSize: "1rem", fontWeight: 700 }} aria-hidden="true">
+                      →
+                    </span>
+                  ) : null}
+                </div>
+                <p style={{ margin: 0, fontSize: "1.02rem", color: "#f1f5f9", fontWeight: 600 }}>{step.title}</p>
+                <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.93rem", lineHeight: 1.4 }}>{step.description}</p>
               </article>
             ))}
           </div>
