@@ -177,7 +177,7 @@ export default async function LandingPage() {
       className="landing-bg relative min-h-screen overflow-x-hidden"
       style={{
         background:
-          "radial-gradient(circle at 12% -8%, rgba(59,130,246,.2), transparent 30%), radial-gradient(circle at 82% 0%, rgba(139,92,246,.2), transparent 28%), #050507",
+          "radial-gradient(circle at 10% -5%, rgba(56,189,248,.22), transparent 28%), radial-gradient(circle at 90% 0%, rgba(139,92,246,.2), transparent 34%), #050505",
         color: "#f8fbff",
       }}
     >
@@ -185,12 +185,13 @@ export default async function LandingPage() {
       <div aria-hidden="true" className="landing-bg-nodes" />
       <div aria-hidden="true" className="landing-bg-pulse" />
       <div
+        aria-hidden="true"
         style={{
           pointerEvents: "none",
           position: "absolute",
           inset: 0,
           background:
-            "radial-gradient(circle at 20% 8%, rgba(56,189,248,.24), transparent 35%), radial-gradient(circle at 78% 2%, rgba(139,92,246,.24), transparent 38%)",
+            "radial-gradient(circle at 18% 12%, rgba(56,189,248,.12), transparent 34%), radial-gradient(circle at 78% 20%, rgba(139,92,246,.15), transparent 36%)",
         }}
       />
 
@@ -199,24 +200,32 @@ export default async function LandingPage() {
       <div
         style={{
           position: "relative",
-          maxWidth: 1180,
+          maxWidth: 1220,
           margin: "0 auto",
-          padding: "7rem 1rem 5.5rem",
+          padding: "6.8rem 1rem 5.5rem",
           display: "grid",
-          gap: "5rem",
+          gap: "5.5rem",
         }}
       >
-        <section className="landing-reveal" style={{ display: "grid", gap: "1.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 320px),1fr))", alignItems: "center" }}>
-          <div style={{ display: "grid", gap: "0.95rem" }}>
+        <section
+          className="landing-reveal"
+          style={{
+            display: "grid",
+            gap: "1.4rem",
+            gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 340px),1fr))",
+            alignItems: "start",
+          }}
+        >
+          <article className="landing-glass" style={{ borderRadius: 28, padding: "1.7rem", display: "grid", gap: "1.1rem", boxShadow: "0 24px 70px rgba(2,6,23,.55)" }}>
             <span
               style={{
                 display: "inline-flex",
                 width: "fit-content",
                 borderRadius: 999,
                 border: "1px solid rgba(34,211,238,.55)",
-                background: "linear-gradient(130deg, rgba(6,182,212,.2), rgba(124,58,237,.24))",
+                background: "linear-gradient(130deg, rgba(6,182,212,.22), rgba(124,58,237,.24))",
                 color: "#bffafe",
-                padding: "0.32rem 0.78rem",
+                padding: "0.34rem 0.78rem",
                 fontSize: "0.71rem",
                 fontWeight: 650,
                 letterSpacing: "0.08em",
@@ -225,49 +234,50 @@ export default async function LandingPage() {
             >
               Freelance mission radar
             </span>
-            <h1 style={{ margin: 0, maxWidth: 760, fontSize: "clamp(2.2rem,6vw,4.35rem)", lineHeight: 0.98, letterSpacing: "-0.04em", textShadow: "0 0 36px rgba(99,102,241,.24)" }}>
+
+            <h1 style={{ margin: 0, fontSize: "clamp(2.3rem,6vw,4.8rem)", lineHeight: 0.95, letterSpacing: "-0.045em", textShadow: "0 0 40px rgba(99,102,241,.3)" }}>
               Stop searching. Get freelance missions sent to you.
             </h1>
-            <p style={{ margin: 0, maxWidth: 680, color: "#d1d5db", fontSize: "clamp(1rem,2vw,1.14rem)", lineHeight: 1.6 }}>
+
+            <p style={{ margin: 0, color: "#d1d5db", fontSize: "clamp(1rem,2vw,1.15rem)", lineHeight: 1.65, maxWidth: 700 }}>
               We scan new offers, rank your best matches, and draft your pitch so you can apply before everyone else.
             </p>
+
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.72rem", marginTop: "0.5rem" }}>
-              <Link
-                href={ctaHref}
-                className="btn btn-primary"
-                style={{ padding: "0.98rem 1.55rem", borderRadius: 14, fontSize: "1.03rem", fontWeight: 700 }}
-              >
+              <Link href={ctaHref} className="btn btn-primary" style={{ padding: "0.98rem 1.7rem", borderRadius: 14, fontSize: "1.03rem", fontWeight: 700 }}>
                 Start free
               </Link>
               <a href="#how-it-works" className="btn" style={{ padding: "0.84rem 1.3rem", borderRadius: 13 }}>
                 See how it works
               </a>
             </div>
+
             <p style={{ margin: "0.2rem 0 0", color: "#99f6e4", fontSize: "0.9rem", fontWeight: 560 }}>
               New missions detected daily — don&apos;t miss your next opportunity.
             </p>
-            <div style={{ marginTop: "0.6rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 150px),1fr))", gap: "0.72rem", maxWidth: 620 }}>
+
+            <div style={{ marginTop: "0.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 150px),1fr))", gap: "0.72rem" }}>
               {[
                 ["24/7", "mission scanning"],
                 ["Top-fit", "AI ranking first"],
                 ["1-click", "pitch generation"],
               ].map(([title, caption]) => (
-                <div key={title} className="landing-glass" style={{ borderRadius: 14, padding: "0.86rem", boxShadow: "inset 0 0 0 1px rgba(125,137,255,.14)" }}>
+                <div key={title} className="landing-glass" style={{ borderRadius: 14, padding: "0.9rem", boxShadow: "inset 0 0 0 1px rgba(125,137,255,.14)" }}>
                   <p style={{ margin: 0, fontSize: "1.48rem", fontWeight: 700 }}>{title}</p>
                   <p style={{ margin: "0.16rem 0 0", color: "#94a3b8", fontSize: "0.88rem" }}>{caption}</p>
                 </div>
               ))}
             </div>
-          </div>
+          </article>
 
-          <div className="landing-reveal" style={{ display: "grid", gap: "0.95rem" }}>
+          <div style={{ display: "grid", gap: "1rem" }}>
             <aside
+              className="landing-reveal"
               style={{
-                borderRadius: 16,
+                borderRadius: 18,
                 border: "1px solid rgba(34,211,238,.5)",
-                background:
-                  "linear-gradient(130deg, rgba(6,182,212,.26), rgba(99,102,241,.3) 54%, rgba(2,6,23,.9) 95%)",
-                padding: "0.85rem 0.92rem",
+                background: "linear-gradient(125deg, rgba(6,182,212,.26), rgba(99,102,241,.28) 54%, rgba(2,6,23,.95) 95%)",
+                padding: "0.9rem 0.95rem",
                 boxShadow: "0 14px 36px rgba(20,184,166,.18), inset 0 0 0 1px rgba(147,197,253,.12)",
               }}
             >
@@ -319,7 +329,9 @@ export default async function LandingPage() {
               <div style={{ borderRadius: 18, border: "1px solid rgba(125,137,255,.26)", background: "linear-gradient(140deg, rgba(15,23,42,.9), rgba(2,6,23,.92))", padding: "1rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem", alignItems: "center", marginBottom: "0.8rem" }}>
                   <p style={{ margin: 0, fontWeight: 650, fontSize: "0.92rem", color: "#e2e8f0" }}>Live mission radar</p>
-                  <span className="badge badge-success" style={{ borderRadius: 999 }}>3 new now</span>
+                  <span className="badge badge-success" style={{ borderRadius: 999 }}>
+                    3 new now
+                  </span>
                 </div>
                 <div style={{ display: "grid", gap: "0.65rem" }}>
                   {[
@@ -345,7 +357,7 @@ export default async function LandingPage() {
                       company: "Consulting firm · Lyon · Remote",
                     },
                   ].map((mission) => (
-                    <article key={mission.role} className="landing-glass" style={{ borderRadius: 13, padding: "0.82rem" }}>
+                    <article key={mission.role} className="landing-glass" style={{ borderRadius: 13, padding: "0.82rem", transition: "transform .2s ease" }}>
                       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: "0.6rem" }}>
                         <h3 style={{ margin: 0, fontSize: "0.95rem" }}>{mission.role}</h3>
                         <span className="badge badge-info">Score {mission.score}</span>
@@ -353,9 +365,7 @@ export default async function LandingPage() {
                       <p style={{ margin: "0.45rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
                         {mission.rate} · {mission.company}
                       </p>
-                      <p style={{ margin: "0.42rem 0 0", color: "#fcd34d", fontSize: "0.8rem", fontWeight: 570 }}>
-                        {mission.badge}
-                      </p>
+                      <p style={{ margin: "0.42rem 0 0", color: "#fcd34d", fontSize: "0.8rem", fontWeight: 570 }}>{mission.badge}</p>
                       <p style={{ margin: "0.48rem 0 0", color: "#cbd5e1", fontSize: "0.83rem" }}>
                         Pitch draft ready: “I&apos;ve shipped this stack in production and can start quickly.”
                       </p>
@@ -367,14 +377,14 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section id="features" className="landing-reveal" style={{ display: "grid", gap: "1.1rem" }}>
+        <section id="features" className="landing-reveal" style={{ display: "grid", gap: "1.2rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>The problem</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>You&apos;re losing freelance opportunities every day</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.6rem,3.8vw,2.7rem)", letterSpacing: "-0.025em" }}>You&apos;re losing freelance opportunities every day</h2>
           </div>
           <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 240px),1fr))" }}>
             {problems.map((problem) => (
-              <article key={problem.title} className="landing-glass" style={{ borderRadius: 16, padding: "1.05rem", display: "grid", gap: "0.62rem" }}>
+              <article key={problem.title} className="landing-glass" style={{ borderRadius: 18, padding: "1.15rem", display: "grid", gap: "0.62rem" }}>
                 <span
                   style={{
                     width: "2rem",
@@ -401,7 +411,7 @@ export default async function LandingPage() {
         <section id="how-it-works" className="landing-reveal" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>How IT-SNIPER works</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>From discovery to application in seconds</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.6rem,3.8vw,2.7rem)", letterSpacing: "-0.025em" }}>From discovery to application in seconds</h2>
           </div>
           <div style={{ display: "grid", gap: "0.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 235px),1fr))" }}>
             {steps.map((step, index) => (
@@ -426,7 +436,7 @@ export default async function LandingPage() {
         <section className="landing-reveal" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Why freelancers use IT-SNIPER</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Get more missions with less effort</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.6rem,3.8vw,2.7rem)", letterSpacing: "-0.025em" }}>Get more missions with less effort</h2>
           </div>
           <div style={{ display: "grid", gap: "0.85rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 250px),1fr))" }}>
             {features.map((feature) => (
@@ -456,7 +466,7 @@ export default async function LandingPage() {
         <section id="pricing" className="landing-reveal" style={{ display: "grid", gap: "1rem" }}>
           <div style={{ textAlign: "center", display: "grid", gap: "0.45rem" }}>
             <p style={{ margin: 0, color: "#bfdbfe", textTransform: "uppercase", fontSize: "0.75rem", letterSpacing: "0.11em", fontWeight: 650 }}>Pricing</p>
-            <h2 style={{ margin: 0, fontSize: "clamp(1.5rem,3.8vw,2.5rem)", letterSpacing: "-0.02em" }}>Start free, upgrade when you want more missions</h2>
+            <h2 style={{ margin: 0, fontSize: "clamp(1.6rem,3.8vw,2.7rem)", letterSpacing: "-0.025em" }}>Start free, upgrade when you want more missions</h2>
             <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.98rem" }}>Compare plans in seconds and pick what helps you win faster.</p>
           </div>
           <div style={{ display: "grid", gap: "0.9rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 240px),1fr))", alignItems: "stretch" }}>
@@ -464,7 +474,7 @@ export default async function LandingPage() {
               <article
                 key={plan.name}
                 style={{
-                  borderRadius: 16,
+                  borderRadius: 18,
                   border: plan.border,
                   background: plan.background,
                   padding: plan.popular ? "1.2rem" : "1rem",
@@ -519,7 +529,7 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-reveal landing-glass" style={{ borderRadius: 20, padding: "1.25rem", display: "grid", gap: "1rem" }}>
+        <section className="landing-reveal landing-glass" style={{ borderRadius: 24, padding: "1.35rem", display: "grid", gap: "1rem" }}>
           <div style={{ display: "grid", gap: "0.35rem" }}>
             <h2 style={{ margin: 0, fontSize: "clamp(1.45rem,3vw,2.3rem)", letterSpacing: "-0.02em" }}>Used by freelancers across Europe</h2>
             <p style={{ margin: 0, color: "#cbd5e1", fontSize: "0.95rem" }}>Built by engineers, for freelancers.</p>
@@ -547,10 +557,10 @@ export default async function LandingPage() {
         <section
           className="landing-reveal"
           style={{
-            borderRadius: 20,
+            borderRadius: 24,
             border: "1px solid rgba(34,211,238,.45)",
             background: "linear-gradient(140deg, rgba(29,78,216,.55), rgba(109,40,217,.45) 45%, rgba(2,6,23,.98))",
-            padding: "2.5rem 1.2rem",
+            padding: "2.7rem 1.2rem",
             textAlign: "center",
             display: "grid",
             gap: "1rem",
