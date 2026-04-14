@@ -116,8 +116,8 @@ const pricingPlans = [
     features: ["Limited missions each week", "Basic mission access", "Standard support"],
     cta: "Start free",
     riskReducer: "No commitment",
-    border: "1px solid rgba(148,163,184,0.3)",
-    background: "linear-gradient(150deg, rgba(15,23,42,.85), rgba(8,12,28,.92) 62%, rgba(2,6,23,.98))",
+    border: "1px solid rgba(148,163,184,0.45)",
+    background: "linear-gradient(160deg, rgba(30,41,59,.9), rgba(15,23,42,.72))",
     popular: false,
   },
   {
@@ -129,8 +129,8 @@ const pricingPlans = [
     features: ["Unlimited missions", "AI matching to your profile", "Full pitch generation", "Priority access"],
     cta: "Upgrade now",
     riskReducer: "Cancel anytime",
-    border: "1px solid rgba(99,102,241,0.7)",
-    background: "linear-gradient(155deg, rgba(79,70,229,.4), rgba(29,78,216,.72) 45%, rgba(10,14,32,.95))",
+    border: "1px solid rgba(59,130,246,0.9)",
+    background: "linear-gradient(155deg, rgba(37,99,235,.38), rgba(30,58,138,.82) 45%, rgba(15,23,42,.9))",
     popular: true,
   },
   {
@@ -142,8 +142,8 @@ const pricingPlans = [
     features: ["Everything in Pro", "Instant mission alerts", "Fast-lane support"],
     cta: "Upgrade now",
     riskReducer: "Cancel anytime",
-    border: "1px solid rgba(56,189,248,0.45)",
-    background: "linear-gradient(155deg, rgba(8,47,73,.5), rgba(29,78,216,.58) 52%, rgba(10,14,32,.95))",
+    border: "1px solid rgba(250,204,21,0.62)",
+    background: "linear-gradient(155deg, rgba(146,64,14,.32), rgba(30,64,175,.8))",
     popular: false,
   },
 ] as const;
@@ -177,7 +177,7 @@ export default async function LandingPage() {
       className="landing-bg relative min-h-screen overflow-x-hidden"
       style={{
         background:
-          "radial-gradient(circle at 10% -8%, rgba(99,102,241,.22), transparent 34%), radial-gradient(circle at 86% 4%, rgba(34,211,238,.2), transparent 30%), linear-gradient(180deg, #06070b 0%, #050507 55%, #040406 100%)",
+          "radial-gradient(circle at 12% -8%, rgba(59,130,246,.2), transparent 30%), radial-gradient(circle at 82% 0%, rgba(139,92,246,.2), transparent 28%), #050507",
         color: "#f8fbff",
       }}
     >
@@ -201,22 +201,22 @@ export default async function LandingPage() {
           position: "relative",
           maxWidth: 1180,
           margin: "0 auto",
-          padding: "7.5rem 1.15rem 6.5rem",
+          padding: "7rem 1rem 5.5rem",
           display: "grid",
-          gap: "6.2rem",
+          gap: "5rem",
         }}
       >
-        <section className="landing-reveal" style={{ display: "grid", gap: "2.4rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 330px),1fr))", alignItems: "center" }}>
-          <div style={{ display: "grid", gap: "1.05rem" }}>
+        <section className="landing-reveal" style={{ display: "grid", gap: "1.8rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 320px),1fr))", alignItems: "center" }}>
+          <div style={{ display: "grid", gap: "0.95rem" }}>
             <span
               style={{
                 display: "inline-flex",
                 width: "fit-content",
                 borderRadius: 999,
-                border: "1px solid rgba(99,102,241,.58)",
-                background: "linear-gradient(130deg, rgba(79,70,229,.23), rgba(6,182,212,.2))",
+                border: "1px solid rgba(34,211,238,.55)",
+                background: "linear-gradient(130deg, rgba(6,182,212,.2), rgba(124,58,237,.24))",
                 color: "#bffafe",
-                padding: "0.35rem 0.82rem",
+                padding: "0.32rem 0.78rem",
                 fontSize: "0.71rem",
                 fontWeight: 650,
                 letterSpacing: "0.08em",
@@ -225,34 +225,34 @@ export default async function LandingPage() {
             >
               Freelance mission radar
             </span>
-            <h1 style={{ margin: 0, maxWidth: 760, fontSize: "clamp(2.35rem,6.1vw,4.8rem)", lineHeight: 0.96, letterSpacing: "-0.045em", background: "linear-gradient(110deg, #ffffff, #c7d2fe 48%, #67e8f9 95%)", WebkitBackgroundClip: "text", color: "transparent", textShadow: "0 0 40px rgba(99,102,241,.2)" }}>
+            <h1 style={{ margin: 0, maxWidth: 760, fontSize: "clamp(2.2rem,6vw,4.35rem)", lineHeight: 0.98, letterSpacing: "-0.04em", textShadow: "0 0 36px rgba(99,102,241,.24)" }}>
               Stop searching. Get freelance missions sent to you.
             </h1>
             <p style={{ margin: 0, maxWidth: 680, color: "#d1d5db", fontSize: "clamp(1rem,2vw,1.14rem)", lineHeight: 1.6 }}>
               We scan new offers, rank your best matches, and draft your pitch so you can apply before everyone else.
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem", marginTop: "0.62rem" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.72rem", marginTop: "0.5rem" }}>
               <Link
                 href={ctaHref}
                 className="btn btn-primary"
-                style={{ padding: "1rem 1.65rem", borderRadius: 14, fontSize: "1.03rem", fontWeight: 700 }}
+                style={{ padding: "0.98rem 1.55rem", borderRadius: 14, fontSize: "1.03rem", fontWeight: 700 }}
               >
                 Start free
               </Link>
-              <a href="#how-it-works" className="btn" style={{ padding: "0.88rem 1.4rem", borderRadius: 13 }}>
+              <a href="#how-it-works" className="btn" style={{ padding: "0.84rem 1.3rem", borderRadius: 13 }}>
                 See how it works
               </a>
             </div>
             <p style={{ margin: "0.2rem 0 0", color: "#99f6e4", fontSize: "0.9rem", fontWeight: 560 }}>
               New missions detected daily — don&apos;t miss your next opportunity.
             </p>
-            <div style={{ marginTop: "0.78rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 150px),1fr))", gap: "0.78rem", maxWidth: 640 }}>
+            <div style={{ marginTop: "0.6rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 150px),1fr))", gap: "0.72rem", maxWidth: 620 }}>
               {[
                 ["24/7", "mission scanning"],
                 ["Top-fit", "AI ranking first"],
                 ["1-click", "pitch generation"],
               ].map(([title, caption]) => (
-                <div key={title} className="landing-glass" style={{ borderRadius: 16, padding: "0.94rem", boxShadow: "inset 0 0 0 1px rgba(99,102,241,.24), 0 16px 34px rgba(2,6,23,.45)" }}>
+                <div key={title} className="landing-glass" style={{ borderRadius: 14, padding: "0.86rem", boxShadow: "inset 0 0 0 1px rgba(125,137,255,.14)" }}>
                   <p style={{ margin: 0, fontSize: "1.48rem", fontWeight: 700 }}>{title}</p>
                   <p style={{ margin: "0.16rem 0 0", color: "#94a3b8", fontSize: "0.88rem" }}>{caption}</p>
                 </div>
@@ -260,15 +260,15 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          <div className="landing-reveal" style={{ display: "grid", gap: "1.05rem" }}>
+          <div className="landing-reveal" style={{ display: "grid", gap: "0.95rem" }}>
             <aside
               style={{
-                borderRadius: 18,
-                border: "1px solid rgba(99,102,241,.5)",
+                borderRadius: 16,
+                border: "1px solid rgba(34,211,238,.5)",
                 background:
-                  "linear-gradient(130deg, rgba(99,102,241,.25), rgba(6,182,212,.2) 52%, rgba(3,7,18,.95) 95%)",
-                padding: "0.92rem 1rem",
-                boxShadow: "0 18px 44px rgba(30,41,59,.5), inset 0 0 0 1px rgba(147,197,253,.14)",
+                  "linear-gradient(130deg, rgba(6,182,212,.26), rgba(99,102,241,.3) 54%, rgba(2,6,23,.9) 95%)",
+                padding: "0.85rem 0.92rem",
+                boxShadow: "0 14px 36px rgba(20,184,166,.18), inset 0 0 0 1px rgba(147,197,253,.12)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.56rem", marginBottom: "0.44rem" }}>
@@ -315,8 +315,8 @@ export default async function LandingPage() {
               </p>
             </aside>
 
-            <div className="landing-glass" style={{ borderRadius: 24, padding: "1.1rem", boxShadow: "0 36px 90px rgba(2,6,23,.78), 0 0 75px rgba(79,70,229,.18)" }}>
-              <div style={{ borderRadius: 18, border: "1px solid rgba(99,102,241,.35)", background: "linear-gradient(140deg, rgba(12,18,36,.92), rgba(4,8,20,.96))", padding: "1rem" }}>
+            <div className="landing-glass" style={{ borderRadius: 24, padding: "1rem", boxShadow: "0 30px 80px rgba(2,6,23,.75), 0 0 55px rgba(99,102,241,.16)" }}>
+              <div style={{ borderRadius: 18, border: "1px solid rgba(125,137,255,.26)", background: "linear-gradient(140deg, rgba(15,23,42,.9), rgba(2,6,23,.92))", padding: "1rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "0.7rem", alignItems: "center", marginBottom: "0.8rem" }}>
                   <p style={{ margin: 0, fontWeight: 650, fontSize: "0.92rem", color: "#e2e8f0" }}>Live mission radar</p>
                   <span className="badge badge-success" style={{ borderRadius: 999 }}>3 new now</span>
@@ -345,7 +345,7 @@ export default async function LandingPage() {
                       company: "Consulting firm · Lyon · Remote",
                     },
                   ].map((mission) => (
-                    <article key={mission.role} className="landing-glass" style={{ borderRadius: 14, padding: "0.85rem", transition: "transform .24s ease, box-shadow .24s ease" }}>
+                    <article key={mission.role} className="landing-glass" style={{ borderRadius: 13, padding: "0.82rem" }}>
                       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: "0.6rem" }}>
                         <h3 style={{ margin: 0, fontSize: "0.95rem" }}>{mission.role}</h3>
                         <span className="badge badge-info">Score {mission.score}</span>
