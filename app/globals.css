@@ -113,22 +113,22 @@ a {
 }
 
 .btn {
-  border: 1px solid rgba(125, 137, 255, 0.45);
-  background: linear-gradient(140deg, rgba(23, 26, 44, 0.82), rgba(16, 18, 34, 0.86));
+  border: 1px solid rgba(129, 140, 248, 0.38);
+  background: linear-gradient(140deg, rgba(20, 24, 42, 0.88), rgba(11, 16, 30, 0.92));
   color: #fff;
   padding: 0.62rem 0.95rem;
   border-radius: 12px;
   cursor: pointer;
   font: inherit;
-  transition: all 0.25s ease;
+  transition: all 0.28s ease;
   box-shadow: 0 0 0 rgba(79, 70, 229, 0);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
 .btn:hover {
-  border-color: rgba(96, 165, 250, 0.8);
-  transform: translateY(-2px) scale(1.015);
-  box-shadow: 0 0 28px rgba(96, 165, 250, 0.28);
+  border-color: rgba(129, 140, 248, 0.8);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 30px rgba(79, 70, 229, 0.3);
 }
 
 .btn:disabled {
@@ -138,9 +138,9 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(120deg, #2563eb, #7c3aed 46%, #06b6d4);
+  background: linear-gradient(120deg, #4f46e5, #2563eb 46%, #06b6d4);
   border: 1px solid transparent;
-  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.42), 0 0 24px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 10px 34px rgba(37, 99, 235, 0.45), 0 0 26px rgba(124, 58, 237, 0.38);
 }
 
 .btn-primary:hover {
@@ -650,6 +650,7 @@ label {
   width: 100%;
   max-width: 100%;
   isolation: isolate;
+  position: relative;
 }
 
 .landing-bg::before,
@@ -663,13 +664,13 @@ label {
 
 .landing-bg::before {
   background:
-    radial-gradient(circle, rgba(45, 212, 191, 0.24) 0 1px, transparent 1px),
-    radial-gradient(circle, rgba(99, 102, 241, 0.25) 0 1px, transparent 1px);
-  background-size: 44px 44px, 84px 84px;
-  background-position: 0 0, 16px 20px;
-  opacity: 0.45;
-  filter: drop-shadow(0 0 7px rgba(96, 165, 250, 0.2));
-  animation: landingStarsDrift 22s linear infinite;
+    radial-gradient(circle, rgba(56, 189, 248, 0.2) 0 1px, transparent 1px),
+    radial-gradient(circle, rgba(129, 140, 248, 0.22) 0 1px, transparent 1px);
+  background-size: 50px 50px, 90px 90px;
+  background-position: 0 0, 20px 18px;
+  opacity: 0.38;
+  filter: drop-shadow(0 0 9px rgba(96, 165, 250, 0.18));
+  animation: landingStarsDrift 24s linear infinite;
 }
 
 .landing-bg::after {
@@ -683,8 +684,8 @@ label {
     rgba(14, 116, 144, 0) 360deg
   );
   transform-origin: center;
-  opacity: 0.42;
-  animation: landingSweep 18s linear infinite;
+  opacity: 0.28;
+  animation: landingSweep 26s linear infinite;
 }
 
 .landing-bg-grid,
@@ -698,13 +699,13 @@ label {
 
 .landing-bg-grid {
   background-image:
-    linear-gradient(rgba(34, 211, 238, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 92, 246, 0.12) 1px, transparent 1px);
-  background-size: 36px 36px;
+    linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(129, 140, 248, 0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
   mask-image: radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0.95), transparent 76%);
   transform: perspective(980px) rotateX(68deg) translateY(35%) scale(1.05);
-  opacity: 0.5;
-  animation: landingGridFlow 16s linear infinite;
+  opacity: 0.34;
+  animation: landingGridFlow 18s linear infinite;
 }
 
 .landing-bg-nodes {
@@ -721,7 +722,7 @@ label {
   background:
     radial-gradient(circle at 12% 18%, rgba(45, 212, 191, 0.14), transparent 38%),
     radial-gradient(circle at 85% 76%, rgba(99, 102, 241, 0.18), transparent 38%);
-  mix-blend-mode: screen;
+  mix-blend-mode: lighten;
   animation: landingPulseTravel 10s ease-in-out infinite;
 }
 
@@ -804,16 +805,16 @@ label {
   position: sticky;
   top: 0;
   z-index: 80;
-  border-bottom: 1px solid rgba(125, 137, 255, 0.28);
-  background: rgba(4, 6, 15, 0.62);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 8px 28px rgba(2, 6, 23, 0.42);
+  border-bottom: 1px solid rgba(129, 140, 248, 0.24);
+  background: linear-gradient(180deg, rgba(5, 7, 14, 0.86), rgba(5, 7, 14, 0.64));
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 36px rgba(2, 6, 23, 0.5);
 }
 
 .landing-navbar-inner {
   max-width: 1180px;
   margin: 0 auto;
-  min-height: 64px;
+  min-height: 70px;
   padding: 0 1rem;
   display: flex;
   align-items: center;
@@ -854,9 +855,10 @@ label {
 }
 
 .landing-navbar-links a {
-  color: #cbd5e1;
+  color: #d1d5db;
   font-size: 0.93rem;
-  font-weight: 500;
+  font-weight: 530;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
 .landing-navbar-links a:hover {
@@ -875,21 +877,23 @@ label {
   align-items: center;
   justify-content: center;
   min-height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(115deg, #2563eb, #7c3aed 52%, #06b6d4);
+  border-radius: 14px;
+  background: linear-gradient(115deg, #4f46e5, #2563eb 52%, #06b6d4);
   color: #ffffff;
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0 1rem;
   border: 1px solid transparent;
-  transition: transform 0.25s ease, filter 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 10px 26px rgba(59, 130, 246, 0.35);
+  transition: transform 0.25s ease, filter 0.25s ease, box-shadow 0.25s ease, background-position 0.3s ease;
+  box-shadow: 0 14px 32px rgba(79, 70, 229, 0.35);
+  background-size: 160% 160%;
 }
 
 .landing-navbar-button:hover {
   filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 16px 36px rgba(124, 58, 237, 0.35);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 18px 42px rgba(124, 58, 237, 0.45);
+  background-position: 100% 40%;
 }
 
 .landing-navbar-dropdown {
@@ -1014,9 +1018,17 @@ label {
 }
 
 .landing-glass {
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(18px);
+  box-shadow: 0 20px 38px rgba(2, 6, 23, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.landing-glass:hover {
+  transform: translateY(-3px);
+  border-color: rgba(129, 140, 248, 0.4);
+  box-shadow: 0 26px 46px rgba(2, 6, 23, 0.5), 0 0 20px rgba(79, 70, 229, 0.2);
 }
 
 @keyframes landingReveal {
@@ -1111,5 +1123,22 @@ label {
 
   .landing-navbar-menu-toggle {
     display: inline-flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal,
+  .landing-bg::before,
+  .landing-bg::after,
+  .landing-bg-grid,
+  .landing-bg-nodes,
+  .landing-bg-pulse {
+    animation: none !important;
+  }
+
+  .landing-glass,
+  .btn,
+  .landing-navbar-button {
+    transition: none !important;
   }
 }
